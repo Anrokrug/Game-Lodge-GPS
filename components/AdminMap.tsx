@@ -64,6 +64,9 @@ export default function AdminMap({
   const currentMarkerRef = useRef<any>(null)
   const pathPolylineRef = useRef<any>(null)
   const initializedRef = useRef(false)
+  // Keep latest callback in a ref so the map click always uses the current version
+  const onReceptionSetRef = useRef(onReceptionSet)
+  useEffect(() => { onReceptionSetRef.current = onReceptionSet }, [onReceptionSet])
 
   const initMap = useCallback(async () => {
     if (!mapRef.current || initializedRef.current) return
@@ -140,9 +143,13 @@ export default function AdminMap({
       m.fitBounds(pathPolylineRef.current.getBounds(), { padding: [40, 40] })
     }
 
-    // Click to set reception
-    if (mode === "reception" && onReceptionSet) {
-      m.on("click", (e: any) => onReceptionSet({ lat: e.latlng.lat, lng: e.latlng.lng }))
+    // Click to set reception — always calls the latest callback via ref
+    if (mode === "reception") {
+      m.on("click", (e: any) => {
+        if (onReceptionSetRef.current) {
+          onReceptionSetRef.current({ lat: e.latlng.lat, lng: e.latlng.lng })
+        }
+      })
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -157,15 +164,7 @@ export default function AdminMap({
     }
   }, [initMap])
 
-  // Update click handler
-  useEffect(() => {
-    const m = mapInstanceRef.current
-    if (!m || mode !== "reception") return
-    m.off("click")
-    if (onReceptionSet) {
-      m.on("click", (e: any) => onReceptionSet({ lat: e.latlng.lat, lng: e.latlng.lng }))
-    }
-  }, [onReceptionSet, mode])
+
 
   // Update reception marker live
   useEffect(() => {

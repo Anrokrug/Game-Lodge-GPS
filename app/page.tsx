@@ -24,6 +24,7 @@ export default function ClientPage() {
   const [gpsLoading, setGpsLoading] = useState(false)
   const [arrived, setArrived] = useState(false)
   const [receptionPoint, setReceptionPoint] = useState<LatLng | null>(null)
+  const [locationPermission, setLocationPermission] = useState<"pending" | "granted" | "denied" | "asking">("pending")
   const watchIdRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -35,6 +36,20 @@ export default function ClientPage() {
       setLoading(false)
     }
     load()
+  }, [])
+
+  // Request location permission upfront
+  const requestLocation = useCallback(() => {
+    if (!navigator.geolocation) { setLocationPermission("denied"); return }
+    setLocationPermission("asking")
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCurrentPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        setLocationPermission("granted")
+      },
+      () => setLocationPermission("denied"),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
   }, [])
 
   const startGPS = useCallback(() => {
@@ -88,6 +103,47 @@ export default function ClientPage() {
     setSelectedHouse(null)
     setArrived(false)
     setGpsError("")
+  }
+
+  // Show permission screen before anything else
+  if (locationPermission === "pending" || locationPermission === "asking") {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "#122918", fontFamily: SANS, padding: 24 }}>
+        <div style={{ maxWidth: 360, width: "100%", textAlign: "center" }}>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", backgroundColor: "#c47c2a", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 28px" }}>
+            <Locate size={32} color="#fff" />
+          </div>
+          <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#f0ede6", marginBottom: 12, lineHeight: 1.2 }}>
+            Allow Location Access
+          </h1>
+          <p style={{ fontSize: 14, color: "rgba(240,237,230,0.6)", lineHeight: 1.7, marginBottom: 32 }}>
+            {PROPERTY_NAME} needs your location to show you where you are on the map and guide you to your destination.
+          </p>
+          {locationPermission === "asking" ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, color: "rgba(240,237,230,0.6)", fontSize: 14 }}>
+              <Loader2 size={20} color="#c47c2a" style={{ animation: "spin 1s linear infinite" }} />
+              Waiting for permission…
+              <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <button
+                onClick={requestLocation}
+                style={{ width: "100%", padding: "16px 24px", borderRadius: 8, fontSize: 15, fontWeight: 700, backgroundColor: "#c47c2a", color: "#fff", border: "none", cursor: "pointer", fontFamily: SANS }}
+              >
+                Allow Location Access
+              </button>
+              <button
+                onClick={() => setLocationPermission("denied")}
+                style={{ width: "100%", padding: "14px 24px", borderRadius: 8, fontSize: 14, fontWeight: 500, backgroundColor: "transparent", color: "rgba(240,237,230,0.5)", border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer", fontFamily: SANS }}
+              >
+                Continue without GPS
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -323,6 +379,7 @@ export default function ClientPage() {
                   receptionPoint={receptionPoint}
                   currentPosition={currentPosition}
                   destinationName={selectedHouse.name}
+                  initialPosition={currentPosition}
                 />
               ) : (
                 <div style={{ height: "100%", minHeight: 420, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "#eceae4" }}>

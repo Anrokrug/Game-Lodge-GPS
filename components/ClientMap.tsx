@@ -8,6 +8,7 @@ interface ClientMapProps {
   receptionPoint: LatLng
   currentPosition: LatLng | null
   destinationName: string
+  initialPosition?: LatLng | null
 }
 
 function loadLeaflet(): Promise<any> {
@@ -48,7 +49,7 @@ function getUserLocation(): Promise<[number, number] | null> {
   })
 }
 
-export default function ClientMap({ path, receptionPoint, currentPosition, destinationName }: ClientMapProps) {
+export default function ClientMap({ path, receptionPoint, currentPosition, destinationName, initialPosition }: ClientMapProps) {
   const mapDivRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const currentMarkerRef = useRef<any>(null)
@@ -59,7 +60,7 @@ export default function ClientMap({ path, receptionPoint, currentPosition, desti
     initializedRef.current = true
 
     const init = async () => {
-      const [L, gpsPos] = await Promise.all([loadLeaflet(), getUserLocation()])
+      const L = await loadLeaflet()
       if (!mapDivRef.current) return
 
       delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -69,10 +70,10 @@ export default function ClientMap({ path, receptionPoint, currentPosition, desti
         shadowUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-shadow.png",
       })
 
-      // Center priority: GPS position → reception point → first path point
+      // Center priority: already-granted GPS → reception point → first path point
       let center: [number, number]
-      if (gpsPos) {
-        center = gpsPos
+      if (initialPosition) {
+        center = [initialPosition.lat, initialPosition.lng]
       } else if (receptionPoint) {
         center = [receptionPoint.lat, receptionPoint.lng]
       } else if (path.length > 0) {
