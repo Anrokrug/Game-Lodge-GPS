@@ -10,8 +10,8 @@ async function ensureTable() {
   const sql = getSQL()
   await sql`
     CREATE TABLE IF NOT EXISTS property_config (
-      id INTEGER PRIMARY KEY DEFAULT 1,
-      reception_point JSONB,
+      id INTEGER PRIMARY KEY,
+      reception_point TEXT,
       default_zoom INTEGER DEFAULT 16,
       property_name TEXT DEFAULT 'Zebula Golf Estate & Spa'
     )
@@ -29,9 +29,13 @@ export async function GET() {
     await ensureTable()
     const rows = await sql`SELECT * FROM property_config WHERE id = 1`
     const row = rows[0]
+    let receptionPoint = null
+    if (row?.reception_point) {
+      try { receptionPoint = typeof row.reception_point === "string" ? JSON.parse(row.reception_point) : row.reception_point } catch {}
+    }
     return NextResponse.json({
       config: {
-        receptionPoint: row?.reception_point ?? null,
+        receptionPoint,
         defaultZoom: row?.default_zoom ?? 16,
         propertyName: row?.property_name ?? "Zebula Golf Estate & Spa",
       },
@@ -51,10 +55,11 @@ export async function POST(req: Request) {
     const body = await req.json()
 
     if (body.receptionPoint !== undefined) {
-      const rp = JSON.stringify(body.receptionPoint)
+      // Pass the object directly — Neon serialises objects as JSONB automatically
+      const rp = body.receptionPoint
       await sql`
         UPDATE property_config
-        SET reception_point = ${rp}::jsonb
+        SET reception_point = ${JSON.stringify(rp)}
         WHERE id = 1
       `
     }
@@ -66,8 +71,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true })
-  } catch (e) {
-    console.error("POST /api/config error:", e)
-    return NextResponse.json({ error: "Failed to update config" }, { status: 500 })
+  } catch (e: any) {
+    console.error("POST /api/config error:", e?.message ?? e)
+    return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 })
   }
 }
