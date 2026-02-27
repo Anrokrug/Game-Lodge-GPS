@@ -161,9 +161,9 @@ export default function AdminDashboard() {
               style={{
                 display: "flex", alignItems: "center", gap: 7, padding: "12px 16px",
                 fontSize: 11, fontWeight: 700, fontFamily: SANS, letterSpacing: "0.1em",
-                borderBottom: activeTab === tab.id ? `2.5px solid ${AMBER}` : "2.5px solid transparent",
                 color: activeTab === tab.id ? "#fff" : "rgba(255,255,255,0.45)",
-                background: "none", border: "none", borderBottom: activeTab === tab.id ? `2.5px solid ${AMBER}` : "2.5px solid transparent",
+                background: "none", border: "none",
+                borderBottom: activeTab === tab.id ? `2.5px solid ${AMBER}` : "2.5px solid transparent",
                 cursor: "pointer",
               }}
             >
