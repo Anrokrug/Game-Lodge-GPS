@@ -227,7 +227,7 @@ export default function AdminDashboard() {
                         className={`p-1.5 rounded-sm transition-all ${
                           deleteConfirm === house.id
                             ? "bg-destructive text-destructive-foreground"
-                            : "text-muted-foreground hover:text-destructive hover:bg-destructive/8"
+                            : "text-muted-foreground hover:text-destructive hover:bg-destructive-subtle"
                         }`}
                         title={deleteConfirm === house.id ? "Click again to confirm deletion" : "Delete house"}
                       >
@@ -236,7 +236,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-9 h-9 bg-primary/8 rounded-sm flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 bg-primary-subtle rounded-sm flex items-center justify-center flex-shrink-0">
                         <Home className="w-4.5 h-4.5 text-primary" />
                       </div>
                       <div>
@@ -291,7 +291,7 @@ export default function AdminDashboard() {
             </div>
 
             {config.receptionPoint ? (
-              <div className="flex items-center gap-3 p-4 bg-success/8 border border-success/25 rounded-sm">
+              <div className="flex items-center gap-3 p-4 bg-success-subtle border border-success-subtle rounded-sm">
                 <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-foreground">Reception point is set</p>
@@ -308,7 +308,7 @@ export default function AdminDashboard() {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-3 p-4 bg-warning/8 border border-warning/25 rounded-sm">
+              <div className="flex items-center gap-3 p-4 bg-muted border border-border rounded-sm">
                 <AlertCircle className="w-4 h-4 text-warning flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-foreground">No reception point set</p>
@@ -458,13 +458,13 @@ export default function AdminDashboard() {
             </div>
 
             {saveStatus === "success" && (
-              <div className="flex items-center gap-2.5 p-3 bg-success/8 border border-success/25 rounded-sm">
+              <div className="flex items-center gap-2.5 p-3 bg-success-subtle border border-success-subtle rounded-sm">
                 <CheckCircle className="w-4 h-4 text-success" />
                 <p className="text-sm font-medium text-foreground">House path saved successfully!</p>
               </div>
             )}
             {saveStatus === "error" && (
-              <div className="flex items-center gap-2.5 p-3 bg-destructive/8 border border-destructive/20 rounded-sm">
+              <div className="flex items-center gap-2.5 p-3 bg-destructive-subtle border border-destructive-subtle rounded-sm">
                 <AlertCircle className="w-4 h-4 text-destructive" />
                 <p className="text-sm text-destructive">
                   {!houseName.trim()
@@ -474,7 +474,7 @@ export default function AdminDashboard() {
               </div>
             )}
             {gpsError && (
-              <div className="flex items-center gap-2.5 p-3 bg-destructive/8 border border-destructive/20 rounded-sm">
+              <div className="flex items-center gap-2.5 p-3 bg-destructive-subtle border border-destructive-subtle rounded-sm">
                 <AlertCircle className="w-4 h-4 text-destructive" />
                 <p className="text-sm text-destructive">{gpsError}</p>
               </div>

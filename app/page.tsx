@@ -199,12 +199,12 @@ export default function ClientPage() {
                       <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
                         Plot {String(index + 1).padStart(2, "0")}
                       </span>
-                      <div className="w-7 h-7 rounded-full border border-border group-hover:border-primary group-hover:bg-primary/5 flex items-center justify-center transition-colors">
+                      <div className="w-7 h-7 rounded-full border border-border group-hover:border-primary group-hover:bg-primary-subtle flex items-center justify-center transition-colors">
                         <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
                     </div>
                     <div className="flex items-end gap-3">
-                      <div className="w-10 h-10 bg-primary/8 rounded-sm flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 bg-primary-subtle rounded-sm flex items-center justify-center flex-shrink-0">
                         <Home className="w-5 h-5 text-primary" />
                       </div>
                       <div className="min-w-0">
@@ -278,7 +278,7 @@ export default function ClientPage() {
           {/* Error notice */}
           {gpsError && (
             <div className="mx-5 mt-3 max-w-5xl">
-              <div className="flex items-start gap-2.5 p-3 bg-destructive/8 border border-destructive/20 rounded-sm">
+                <div className="flex items-start gap-2.5 p-3 bg-destructive-subtle border border-destructive-subtle rounded-sm">
                 <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-destructive leading-relaxed">{gpsError}</p>
               </div>
@@ -288,7 +288,7 @@ export default function ClientPage() {
           {/* Arrived banner */}
           {arrived && (
             <div className="mx-5 mt-3 max-w-5xl">
-              <div className="flex items-center gap-3 p-4 bg-success/8 border border-success/25 rounded-sm">
+              <div className="flex items-center gap-3 p-4 bg-success-subtle border border-success-subtle rounded-sm">
                 <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
                 <div>
                   <p className="font-serif font-semibold text-foreground">You have arrived</p>
