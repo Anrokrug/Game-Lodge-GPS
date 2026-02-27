@@ -4,12 +4,14 @@ import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import {
-  isAuthenticated, logout, getHouses, saveHouse, deleteHouse,
-  getConfig, saveConfig, type House, type LatLng, type PropertyConfig,
-} from "@/lib/storage"
+  isAuthenticated, logout,
+  fetchHouses, createHouse, removeHouse,
+  fetchConfig, updateConfig,
+  type House, type LatLng, type PropertyConfig,
+} from "@/lib/api"
 import {
   MapPin, LogOut, Plus, Trash2, Home, Navigation,
-  Settings, CheckCircle, AlertCircle, Edit3, Circle,
+  Settings, CheckCircle, AlertCircle, Edit3, Loader2,
 } from "lucide-react"
 
 const AdminMap = dynamic(() => import("@/components/AdminMap"), { ssr: false })
@@ -26,35 +28,51 @@ const DESTRUCTIVE = "#b03a2e"
 
 const btn = (bg: string, color = "#fff", extra?: React.CSSProperties): React.CSSProperties => ({
   display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-  padding: "9px 16px", borderRadius: 7, fontSize: 12, fontWeight: 700,
+  padding: "9px 18px", borderRadius: 7, fontSize: 12, fontWeight: 700,
   fontFamily: SANS, letterSpacing: "0.06em", border: "none", cursor: "pointer",
-  backgroundColor: bg, color, ...extra,
+  backgroundColor: bg, color, transition: "opacity 0.15s", ...extra,
 })
 
 export default function AdminDashboard() {
   const router = useRouter()
   const [houses, setHouses] = useState<House[]>([])
   const [config, setConfig] = useState<PropertyConfig | null>(null)
+  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>("houses")
+
+  // Recording
   const [recording, setRecording] = useState(false)
   const [recordedPath, setRecordedPath] = useState<LatLng[]>([])
   const [houseName, setHouseName] = useState("")
   const [houseDescription, setHouseDescription] = useState("")
-  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle")
-  const [settingReception, setSettingReception] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle")
   const [watchId, setWatchId] = useState<number | null>(null)
   const [currentPosition, setCurrentPosition] = useState<LatLng | null>(null)
   const [gpsError, setGpsError] = useState("")
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
+  // Houses
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // Load data from API
   useEffect(() => {
     if (!isAuthenticated()) { router.replace("/admin"); return }
-    setHouses(getHouses())
-    setConfig(getConfig())
+    async function load() {
+      setLoading(true)
+      const [h, cfg] = await Promise.all([fetchHouses(), fetchConfig()])
+      setHouses(h)
+      setConfig(cfg)
+      setLoading(false)
+    }
+    load()
   }, [router])
 
-  const refreshHouses = useCallback(() => setHouses(getHouses()), [])
+  const refreshHouses = useCallback(async () => {
+    const h = await fetchHouses()
+    setHouses(h)
+  }, [])
 
+  // Recording
   const startRecording = useCallback(() => {
     setGpsError("")
     setRecordedPath([])
@@ -85,10 +103,11 @@ export default function AdminDashboard() {
     setRecording(false)
   }, [watchId])
 
-  const savePath = useCallback(() => {
+  const savePath = useCallback(async () => {
     if (!houseName.trim() || recordedPath.length < 2) { setSaveStatus("error"); return }
-    const cfg = getConfig()
-    saveHouse({
+    setSaveStatus("saving")
+    const cfg = config || await fetchConfig()
+    await createHouse({
       name: houseName.trim(),
       description: houseDescription.trim(),
       path: recordedPath,
@@ -98,32 +117,49 @@ export default function AdminDashboard() {
     setHouseName("")
     setHouseDescription("")
     setRecordedPath([])
-    refreshHouses()
-    setTimeout(() => { setSaveStatus("idle"); setActiveTab("houses") }, 2000)
-  }, [houseName, houseDescription, recordedPath, refreshHouses])
+    await refreshHouses()
+    setTimeout(() => { setSaveStatus("idle"); setActiveTab("houses") }, 2200)
+  }, [houseName, houseDescription, recordedPath, config, refreshHouses])
 
-  const handleDeleteHouse = (id: string) => {
-    if (deleteConfirm === id) { deleteHouse(id); refreshHouses(); setDeleteConfirm(null) }
-    else { setDeleteConfirm(id); setTimeout(() => setDeleteConfirm(null), 3000) }
-  }
+  const handleDeleteHouse = useCallback(async (id: string) => {
+    if (deleteConfirm === id) {
+      setDeletingId(id)
+      await removeHouse(id)
+      await refreshHouses()
+      setDeletingId(null)
+      setDeleteConfirm(null)
+    } else {
+      setDeleteConfirm(id)
+      setTimeout(() => setDeleteConfirm(null), 3000)
+    }
+  }, [deleteConfirm, refreshHouses])
 
-  const handleSetReception = (latlng: LatLng) => {
-    saveConfig({ receptionPoint: latlng })
-    setConfig(getConfig())
-    setSettingReception(false)
-  }
-
-  if (!config) return null
+  const handleSetReception = useCallback(async (latlng: LatLng) => {
+    await updateConfig({ receptionPoint: latlng })
+    const cfg = await fetchConfig()
+    setConfig(cfg)
+  }, [])
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "11px 14px", borderRadius: 8,
-    border: "1.5px solid #dddbd4", backgroundColor: "#f7f5f0",
+    border: "1.5px solid #dddbd4", backgroundColor: "#fff",
     fontSize: 13, color: "#1a2a1e", fontFamily: SANS,
     outline: "none", boxSizing: "border-box",
   }
 
+  if (loading || !config) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "#f7f5f0", gap: 16 }}>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        <Loader2 size={36} color={PRIMARY} style={{ animation: "spin 1s linear infinite" }} />
+        <p style={{ fontSize: 14, color: "#6b7c6e", fontFamily: SANS }}>Loading estate data…</p>
+      </div>
+    )
+  }
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#f7f5f0", fontFamily: SANS }}>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
 
       {/* HEADER */}
       <header style={{ backgroundColor: DARK_GREEN, position: "sticky", top: 0, zIndex: 50, boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
@@ -133,60 +169,56 @@ export default function AdminDashboard() {
               <MapPin size={14} color="#fff" />
             </div>
             <div>
-              <p style={{ fontFamily: SERIF, fontSize: 14, fontWeight: 700, color: "#f0ede6", lineHeight: 1 }}>Property Navigator</p>
-              <p style={{ fontSize: 10, color: "rgba(240,237,230,0.4)", letterSpacing: "0.14em", marginTop: 3, lineHeight: 1 }}>ADMIN</p>
+              <p style={{ fontFamily: SERIF, fontSize: 13, fontWeight: 700, color: "#f0ede6", lineHeight: 1 }}>Zebula Golf Estate &amp; Spa</p>
+              <p style={{ fontSize: 10, color: "rgba(240,237,230,0.4)", letterSpacing: "0.12em", marginTop: 3, lineHeight: 1 }}>ADMIN PORTAL</p>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <a href="/" style={{ fontSize: 11, color: "rgba(240,237,230,0.5)", letterSpacing: "0.1em", textDecoration: "none" }}>GUEST VIEW</a>
-            <button
-              onClick={() => { logout(); router.push("/admin") }}
-              style={{ ...btn("transparent", "rgba(240,237,230,0.8)", { border: "1px solid rgba(255,255,255,0.2)" }) }}
-            >
+            <button onClick={() => { logout(); router.push("/admin") }} style={btn("transparent", "rgba(240,237,230,0.8)", { border: "1px solid rgba(255,255,255,0.2)" })}>
               <LogOut size={13} /> Sign out
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", maxWidth: 1100, margin: "0 auto", padding: "0 16px", display: "flex" }}>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", maxWidth: 1100, margin: "0 auto", padding: "0 16px", display: "flex", overflowX: "auto" }}>
           {([
-            { id: "houses", label: "Houses", icon: <Home size={14} /> },
-            { id: "reception", label: "Reception", icon: <Settings size={14} /> },
-            { id: "record", label: "Record Path", icon: <Navigation size={14} /> },
-          ] as const).map((tab) => (
-            <button
-              key={tab.id}
+            { id: "houses" as Tab, label: "HOUSES", icon: <Home size={13} /> },
+            { id: "reception" as Tab, label: "RECEPTION POINT", icon: <Settings size={13} /> },
+            { id: "record" as Tab, label: "RECORD PATH", icon: <Navigation size={13} /> },
+          ]).map((tab) => (
+            <button key={tab.id}
               onClick={() => { setActiveTab(tab.id); if (tab.id !== "record" && recording) stopRecording() }}
               style={{
-                display: "flex", alignItems: "center", gap: 7, padding: "12px 16px",
+                display: "flex", alignItems: "center", gap: 6, padding: "12px 16px", whiteSpace: "nowrap",
                 fontSize: 11, fontWeight: 700, fontFamily: SANS, letterSpacing: "0.1em",
                 color: activeTab === tab.id ? "#fff" : "rgba(255,255,255,0.45)",
                 background: "none", border: "none",
                 borderBottom: activeTab === tab.id ? `2.5px solid ${AMBER}` : "2.5px solid transparent",
                 cursor: "pointer",
-              }}
-            >
-              {tab.icon}
-              <span>{tab.label.toUpperCase()}</span>
+              }}>
+              {tab.icon} {tab.label}
             </button>
           ))}
         </div>
       </header>
 
-      {/* CONTENT */}
+      {/* MAIN */}
       <main style={{ flex: 1, maxWidth: 1100, width: "100%", margin: "0 auto", padding: "32px 16px" }}>
 
-        {/* HOUSES TAB */}
+        {/* ── HOUSES TAB ── */}
         {activeTab === "houses" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
               <div>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.12em", marginBottom: 6 }}>SAVED DESTINATIONS</p>
-                <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#1a2a1e", lineHeight: 1.1 }}>Houses</h2>
+                <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#1a2a1e" }}>
+                  Houses <span style={{ fontSize: 16, fontWeight: 400, color: "#6b7c6e", fontFamily: SANS }}>({houses.length})</span>
+                </h2>
               </div>
               <button onClick={() => setActiveTab("record")} style={btn(PRIMARY)}>
-                <Plus size={14} /> ADD HOUSE
+                <Plus size={14} /> Record New House
               </button>
             </div>
 
@@ -195,9 +227,9 @@ export default function AdminDashboard() {
                 <div style={{ width: 56, height: 56, borderRadius: "50%", border: "2px solid #dddbd4", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
                   <Home size={24} color="#6b7c6e" />
                 </div>
-                <h3 style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: "#1a2a1e", marginBottom: 8 }}>No houses recorded yet</h3>
+                <h3 style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 700, color: "#1a2a1e", marginBottom: 8 }}>No houses recorded yet</h3>
                 <p style={{ fontSize: 13, color: "#6b7c6e", maxWidth: 280, lineHeight: 1.6 }}>
-                  Go to the Record Path tab and drive from reception to each house to save a route.
+                  Go to Record Path and drive from reception to each house to save a route.
                 </p>
               </div>
             ) : (
@@ -210,16 +242,10 @@ export default function AdminDashboard() {
                       </span>
                       <button
                         onClick={() => handleDeleteHouse(house.id)}
-                        title={deleteConfirm === house.id ? "Click again to confirm" : "Delete"}
-                        style={{
-                          width: 28, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
-                          backgroundColor: deleteConfirm === house.id ? DESTRUCTIVE : "transparent",
-                          color: deleteConfirm === house.id ? "#fff" : "#9ca3af",
-                          border: `1px solid ${deleteConfirm === house.id ? DESTRUCTIVE : "#dddbd4"}`,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Trash2 size={13} />
+                        title={deleteConfirm === house.id ? "Click again to confirm delete" : "Delete house"}
+                        disabled={deletingId === house.id}
+                        style={{ width: 28, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: deleteConfirm === house.id ? DESTRUCTIVE : "transparent", color: deleteConfirm === house.id ? "#fff" : "#9ca3af", border: `1px solid ${deleteConfirm === house.id ? DESTRUCTIVE : "#dddbd4"}`, cursor: "pointer" }}>
+                        {deletingId === house.id ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Trash2 size={13} />}
                       </button>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -227,7 +253,7 @@ export default function AdminDashboard() {
                         <Home size={20} color={PRIMARY} />
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <h3 style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 700, color: "#1a2a1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <h3 style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 700, color: "#1a2a1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {house.name}
                         </h3>
                         {house.description && (
@@ -254,13 +280,15 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* RECEPTION TAB */}
+        {/* ── RECEPTION TAB ── */}
         {activeTab === "reception" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <div>
               <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.12em", marginBottom: 6 }}>CONFIGURATION</p>
-              <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#1a2a1e", lineHeight: 1.1 }}>Reception Point</h2>
-              <p style={{ fontSize: 13, color: "#6b7c6e", marginTop: 6 }}>All navigation routes start from this location.</p>
+              <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#1a2a1e" }}>Reception Point</h2>
+              <p style={{ fontSize: 13, color: "#6b7c6e", marginTop: 6, lineHeight: 1.6 }}>
+                All guest navigation routes start from this location. Tap the map to set it, or use the button below to use your current GPS position.
+              </p>
             </div>
 
             {config.receptionPoint ? (
@@ -268,12 +296,12 @@ export default function AdminDashboard() {
                 <CheckCircle size={17} color={SUCCESS} style={{ flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>Reception point is set</p>
-                  <p style={{ fontSize: 11, color: "#6b7c6e", fontFamily: "monospace", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <p style={{ fontSize: 11, color: "#6b7c6e", fontFamily: "monospace", marginTop: 2 }}>
                     {config.receptionPoint.lat.toFixed(6)}, {config.receptionPoint.lng.toFixed(6)}
                   </p>
                 </div>
-                <button onClick={() => setSettingReception(true)} style={btn(PRIMARY, "#fff", { flexShrink: 0 })}>
-                  <Edit3 size={12} /> Change
+                <button onClick={() => handleSetReception(config.receptionPoint!)} style={btn(PRIMARY, "#fff", { flexShrink: 0 })}>
+                  <Edit3 size={12} /> Update
                 </button>
               </div>
             ) : (
@@ -281,140 +309,94 @@ export default function AdminDashboard() {
                 <AlertCircle size={17} color={AMBER} style={{ flexShrink: 0 }} />
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>No reception point set</p>
-                  <p style={{ fontSize: 12, color: "#6b7c6e", marginTop: 2 }}>Tap the map below to place your reception marker.</p>
+                  <p style={{ fontSize: 12, color: "#6b7c6e", marginTop: 2 }}>Tap anywhere on the map below to place your reception marker.</p>
                 </div>
               </div>
             )}
 
-            <div style={{ borderRadius: 10, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #dddbd4" }}>
-              <div style={{ padding: "12px 16px", borderBottom: "1px solid #dddbd4", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <p style={{ fontSize: 13, fontWeight: 500, color: "#1a2a1e" }}>
-                  {settingReception || !config.receptionPoint ? "Tap the map to place the reception marker" : "Current reception location"}
-                </p>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {(settingReception || !config.receptionPoint) && (
-                    <button
-                      onClick={() => {
-                        if (!navigator.geolocation) return
-                        navigator.geolocation.getCurrentPosition(
-                          (pos) => handleSetReception({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                          () => setGpsError("Could not get your GPS position")
-                        )
-                      }}
-                      style={btn(AMBER)}
-                    >
-                      <Navigation size={12} /> Use My Location
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setSettingReception((v) => !v)}
-                    style={btn("#eceae4", "#1a2a1e", { border: "1px solid #dddbd4" })}
-                  >
-                    <MapPin size={12} /> {settingReception ? "Cancel" : "Set on Map"}
-                  </button>
-                </div>
-              </div>
-              <div style={{ height: 420 }}>
-                <AdminMap
-                  mode="reception"
-                  receptionPoint={config.receptionPoint}
-                  onReceptionSet={settingReception || !config.receptionPoint ? handleSetReception : undefined}
-                  currentPosition={currentPosition}
-                />
-              </div>
+            <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", height: 420 }}>
+              <AdminMap
+                mode="reception"
+                receptionPoint={config.receptionPoint}
+                onReceptionSet={handleSetReception}
+              />
             </div>
-            {gpsError && <p style={{ fontSize: 13, color: DESTRUCTIVE }}>{gpsError}</p>}
           </div>
         )}
 
-        {/* RECORD PATH TAB */}
+        {/* ── RECORD PATH TAB ── */}
         {activeTab === "record" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.12em", marginBottom: 6 }}>PATH RECORDING</p>
-              <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#1a2a1e", lineHeight: 1.1 }}>Record a Route</h2>
-              <p style={{ fontSize: 13, color: "#6b7c6e", marginTop: 6 }}>Enter the house name, then drive from reception to the house while recording.</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.12em", marginBottom: 6 }}>ROUTE RECORDING</p>
+              <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#1a2a1e" }}>Record Path</h2>
+              <p style={{ fontSize: 13, color: "#6b7c6e", marginTop: 6, lineHeight: 1.6 }}>
+                Enter a house name, press Start, then drive from reception to the house. Press Stop when you arrive, then save.
+              </p>
             </div>
 
-            {/* Input fields */}
-            <div style={{ borderRadius: 10, padding: 20, backgroundColor: "#fff", border: "1px solid #dddbd4", display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label htmlFor="hname" style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#1a2a1e", letterSpacing: "0.1em", marginBottom: 8 }}>
-                  HOUSE NAME <span style={{ color: DESTRUCTIVE }}>*</span>
-                </label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#1a2a1e", letterSpacing: "0.1em", marginBottom: 6 }}>HOUSE NAME *</label>
                 <input
-                  id="hname" type="text" value={houseName}
+                  value={houseName}
                   onChange={(e) => setHouseName(e.target.value)}
-                  placeholder="e.g. The Old Oak Cottage"
-                  disabled={recording} style={inputStyle}
+                  placeholder="e.g. Villa Acacia"
+                  style={inputStyle}
                   onFocus={(e) => (e.currentTarget.style.borderColor = PRIMARY)}
                   onBlur={(e) => (e.currentTarget.style.borderColor = "#dddbd4")}
                 />
               </div>
               <div>
-                <label htmlFor="hdesc" style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#1a2a1e", letterSpacing: "0.1em", marginBottom: 8 }}>
-                  DESCRIPTION <span style={{ fontSize: 11, fontWeight: 400, color: "#6b7c6e", letterSpacing: "normal", textTransform: "none" }}>(optional)</span>
-                </label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#1a2a1e", letterSpacing: "0.1em", marginBottom: 6 }}>DESCRIPTION (OPTIONAL)</label>
                 <input
-                  id="hdesc" type="text" value={houseDescription}
+                  value={houseDescription}
                   onChange={(e) => setHouseDescription(e.target.value)}
-                  placeholder="e.g. Blue roof near the dam"
-                  disabled={recording} style={inputStyle}
+                  placeholder="e.g. Near the golf course"
+                  style={inputStyle}
                   onFocus={(e) => (e.currentTarget.style.borderColor = PRIMARY)}
                   onBlur={(e) => (e.currentTarget.style.borderColor = "#dddbd4")}
                 />
               </div>
             </div>
 
-            {/* Recording status */}
-            {recording && (
-              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 8, backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}>
-                <span style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: DESTRUCTIVE, flexShrink: 0, animation: "pulse 1.2s infinite" }} />
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>Recording in progress…</p>
-                  <p style={{ fontSize: 12, color: "#6b7c6e", marginTop: 2 }}>
-                    {recordedPath.length} GPS points recorded &mdash; drive slowly towards your destination
-                  </p>
-                </div>
-                {currentPosition && (
-                  <p style={{ fontSize: 11, color: "#6b7c6e", fontFamily: "monospace", flexShrink: 0 }}>
-                    {currentPosition.lat.toFixed(4)}, {currentPosition.lng.toFixed(4)}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Buttons */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               {!recording ? (
-                <button onClick={startRecording} style={{ ...btn(PRIMARY), padding: "13px 24px", fontSize: 13, flex: 1, minWidth: 160, justifyContent: "center" }}>
-                  <Circle size={14} color="#f87171" fill="#f87171" /> Start Recording
+                <button onClick={startRecording} style={btn(PRIMARY)}>
+                  <Navigation size={14} /> Start Recording
                 </button>
               ) : (
-                <button onClick={stopRecording} style={{ ...btn(DESTRUCTIVE), padding: "13px 24px", fontSize: 13, flex: 1, minWidth: 160, justifyContent: "center" }}>
-                  <span style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: "#fff", flexShrink: 0 }} /> Stop Recording
+                <button onClick={stopRecording} style={btn(DESTRUCTIVE)}>
+                  <Navigation size={14} /> Stop Recording
                 </button>
               )}
-              {recordedPath.length >= 2 && !recording && (
-                <button
-                  onClick={savePath}
-                  disabled={!houseName.trim()}
-                  style={{ ...btn(!houseName.trim() ? "#9ca3af" : AMBER), padding: "13px 24px", fontSize: 13, flex: 1, minWidth: 160, justifyContent: "center", cursor: !houseName.trim() ? "not-allowed" : "pointer" }}
-                >
-                  <CheckCircle size={15} /> Save House Path
+              {!recording && recordedPath.length > 1 && (
+                <button onClick={savePath} disabled={saveStatus === "saving"} style={btn(AMBER, "#fff", { opacity: saveStatus === "saving" ? 0.7 : 1 })}>
+                  {saveStatus === "saving" ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <CheckCircle size={14} />}
+                  {saveStatus === "saving" ? "Saving…" : "Save House Path"}
                 </button>
+              )}
+              {recordedPath.length > 0 && (
+                <span style={{ fontSize: 12, color: "#6b7c6e", fontWeight: 600 }}>
+                  {recordedPath.length} GPS points recorded
+                </span>
+              )}
+              {recording && (
+                <span style={{ fontSize: 12, color: SUCCESS, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: SUCCESS, display: "inline-block", animation: "pulse 1s infinite" }} />
+                  Recording live…
+                </span>
               )}
             </div>
 
-            {/* Status messages */}
             {saveStatus === "success" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 8, backgroundColor: "rgba(35,107,48,0.08)", border: "1px solid rgba(35,107,48,0.2)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 8, backgroundColor: "rgba(35,107,48,0.07)", border: "1px solid rgba(35,107,48,0.22)" }}>
                 <CheckCircle size={16} color={SUCCESS} />
-                <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>House path saved successfully!</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>House path saved successfully — visible to all guests now!</p>
               </div>
             )}
             {saveStatus === "error" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 8, backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 8, backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}>
                 <AlertCircle size={16} color={DESTRUCTIVE} />
                 <p style={{ fontSize: 13, color: DESTRUCTIVE }}>
                   {!houseName.trim() ? "Please enter a house name first." : "Record at least 2 GPS points before saving."}
@@ -422,61 +404,34 @@ export default function AdminDashboard() {
               </div>
             )}
             {gpsError && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 8, backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 8, backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}>
                 <AlertCircle size={16} color={DESTRUCTIVE} />
                 <p style={{ fontSize: 13, color: DESTRUCTIVE }}>{gpsError}</p>
               </div>
             )}
 
-            {/* Map */}
-            <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4" }}>
-              <div style={{ padding: "12px 16px", borderBottom: "1px solid #dddbd4", backgroundColor: "#fff" }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "#1a2a1e" }}>Live GPS Map</p>
-                <p style={{ fontSize: 11, color: "#6b7c6e", marginTop: 2 }}>
-                  {recording ? "Map is following your position as you drive" : "Start recording to see your position on the map"}
-                </p>
-              </div>
-              <div style={{ height: 400 }}>
+            {recordedPath.length > 0 && (
+              <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", height: 380 }}>
                 <AdminMap
                   mode="record"
                   receptionPoint={config.receptionPoint}
-                  isRecording={recording}
                   recordedPath={recordedPath}
                   currentPosition={currentPosition}
+                  isRecording={recording}
                 />
               </div>
-            </div>
-
-            {/* Instructions */}
-            <div style={{ borderRadius: 10, padding: 20, backgroundColor: "#fff", border: "1px solid #dddbd4" }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.1em", marginBottom: 14 }}>HOW TO RECORD A PATH</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[
-                  "Enter the house name in the field above.",
-                  "Drive to or stand at the Reception / gate point.",
-                  "Tap Start Recording, then drive slowly to the house.",
-                  "Tap Stop Recording when you arrive at the destination.",
-                  "Tap Save House Path to store the route for guests.",
-                ].map((step, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "rgba(30,74,40,0.09)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: PRIMARY }}>{i + 1}</span>
-                    </div>
-                    <p style={{ fontSize: 13, color: "#6b7c6e", lineHeight: 1.6 }}>{step}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         )}
+
       </main>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-      `}</style>
+      {/* FOOTER */}
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "14px 16px", textAlign: "center", backgroundColor: DARK_GREEN }}>
+        <p style={{ fontSize: 10, color: "rgba(240,237,230,0.35)", letterSpacing: "0.08em", fontFamily: SANS }}>
+          ZEBULA GOLF ESTATE &amp; SPA &nbsp;&mdash;&nbsp; Developed by Anro Kruger
+        </p>
+      </footer>
     </div>
   )
 }

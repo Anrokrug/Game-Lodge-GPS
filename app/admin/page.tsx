@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
           <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: "#c47c2a", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <MapPin size={17} color="#fff" />
           </div>
-          <span style={{ fontFamily: SERIF, fontSize: 15, fontWeight: 700, color: "#f0ede6" }}>Property Navigator</span>
+          <span style={{ fontFamily: SERIF, fontSize: 15, fontWeight: 700, color: "#f0ede6" }}>Zebula Golf Estate &amp; Spa</span>
         </div>
 
         <div>
@@ -88,7 +88,7 @@ export default function AdminLoginPage() {
           <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: "#122918", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <MapPin size={17} color="#fff" />
           </div>
-          <span style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 700, color: "#1a2a1e" }}>Property Navigator</span>
+          <span style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 700, color: "#1a2a1e" }}>Zebula Golf Estate &amp; Spa</span>
         </div>
 
         <div style={{ width: "100%", maxWidth: 360 }}>
@@ -164,24 +164,15 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
-          <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid #dddbd4" }}>
-            <p style={{ fontSize: 12, color: "#6b7c6e" }}>
-              Default password:{" "}
-              <code style={{ padding: "2px 6px", borderRadius: 4, backgroundColor: "#eceae4", color: "#1a2a1e", fontFamily: "monospace", fontSize: 12 }}>
-                admin1234
-              </code>
-            </p>
-            <p style={{ fontSize: 12, color: "#6b7c6e", marginTop: 6 }}>
-              Change it in{" "}
-              <code style={{ fontFamily: "monospace", color: "#1a2a1e", fontSize: 12 }}>/lib/storage.ts</code>
-            </p>
-          </div>
         </div>
 
-        <div style={{ marginTop: 40 }}>
+        <div style={{ marginTop: 32, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           <a href="/" style={{ fontSize: 12, fontWeight: 500, color: "#6b7c6e", letterSpacing: "0.08em", textDecoration: "none" }}>
             &larr; Back to guest view
           </a>
+          <p style={{ fontSize: 10, color: "#9cad9f", letterSpacing: "0.06em" }}>
+            Developed by Anro Kruger
+          </p>
         </div>
       </main>
 

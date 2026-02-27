@@ -2,18 +2,20 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import dynamic from "next/dynamic"
-import { getHouses, getConfig, type House, type LatLng } from "@/lib/storage"
-import { MapPin, Home, Navigation, ArrowLeft, CheckCircle, AlertCircle, Locate, ChevronRight, Map } from "lucide-react"
+import { fetchHouses, fetchConfig, type House, type LatLng } from "@/lib/api"
+import { MapPin, Home, Navigation, ArrowLeft, CheckCircle, AlertCircle, Locate, ChevronRight, Map, Loader2 } from "lucide-react"
 
 const ClientMap = dynamic(() => import("@/components/ClientMap"), { ssr: false })
 
 const SERIF = "'Playfair Display', Georgia, serif"
 const SANS = "'Inter', system-ui, sans-serif"
+const PROPERTY_NAME = "Zebula Golf Estate & Spa"
 
 type Screen = "select" | "navigate"
 
 export default function ClientPage() {
   const [houses, setHouses] = useState<House[]>([])
+  const [loading, setLoading] = useState(true)
   const [screen, setScreen] = useState<Screen>("select")
   const [selectedHouse, setSelectedHouse] = useState<House | null>(null)
   const [currentPosition, setCurrentPosition] = useState<LatLng | null>(null)
@@ -21,20 +23,18 @@ export default function ClientPage() {
   const [gpsReady, setGpsReady] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [arrived, setArrived] = useState(false)
-  const [propertyName, setPropertyName] = useState("The Estate")
   const [receptionPoint, setReceptionPoint] = useState<LatLng | null>(null)
-  const watchIdRef = useRef<number | null>(null)
 
   useEffect(() => {
-    setHouses(getHouses())
-    const cfg = getConfig()
-    setPropertyName(cfg.propertyName || "The Estate")
-    setReceptionPoint(cfg.receptionPoint)
+    async function load() {
+      setLoading(true)
+      const [h, cfg] = await Promise.all([fetchHouses(), fetchConfig()])
+      setHouses(h)
+      setReceptionPoint(cfg.receptionPoint)
+      setLoading(false)
+    }
+    load()
   }, [])
-
-  useEffect(() => {
-    setReceptionPoint(getConfig().receptionPoint)
-  }, [screen])
 
   const startGPS = useCallback(() => {
     if (!navigator.geolocation) { setGpsError("GPS not available on this device."); return }
@@ -116,7 +116,7 @@ export default function ClientPage() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ color: "#f0ede6", fontFamily: SERIF, fontSize: 15, fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {propertyName}
+              {PROPERTY_NAME}
             </p>
             <p style={{ color: "rgba(240,237,230,0.45)", fontSize: 10, marginTop: 3, letterSpacing: "0.1em", lineHeight: 1 }}>
               {screen === "navigate" && selectedHouse ? selectedHouse.name.toUpperCase() : "GUEST NAVIGATION"}
@@ -140,7 +140,7 @@ export default function ClientPage() {
           <section style={{ backgroundColor: "#122918" }}>
             <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 20px 52px" }}>
               <p style={{ color: "rgba(240,237,230,0.45)", fontSize: 11, fontWeight: 600, letterSpacing: "0.14em", marginBottom: 14 }}>
-                WELCOME TO THE ESTATE
+                WELCOME TO ZEBULA GOLF ESTATE &amp; SPA
               </p>
               <h1 style={{ fontFamily: SERIF, fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 800, color: "#f0ede6", lineHeight: 1.15, marginBottom: 14 }}>
                 Where would you<br />like to go?
@@ -156,7 +156,13 @@ export default function ClientPage() {
 
           {/* Cards */}
           <section style={{ flex: 1, maxWidth: 900, width: "100%", margin: "0 auto", padding: "32px 16px" }}>
-            {houses.length === 0 ? (
+            {loading ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 24px", gap: 16 }}>
+                <Loader2 size={32} color="#1e4a28" style={{ animation: "spin 1s linear infinite" }} />
+                <p style={{ fontSize: 14, color: "#6b7c6e" }}>Loading destinations…</p>
+                <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+              </div>
+            ) : houses.length === 0 ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 24px", textAlign: "center" }}>
                 <div style={{ width: 64, height: 64, borderRadius: "50%", border: "2px solid #dddbd4", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
                   <Home size={28} color="#6b7c6e" />
@@ -217,12 +223,15 @@ export default function ClientPage() {
                   </button>
                 ))}
               </div>
-            )}
+            ) : null}
           </section>
 
           <footer style={{ borderTop: "1px solid #dddbd4", padding: "16px 0", textAlign: "center" }}>
             <p style={{ fontSize: 11, color: "#6b7c6e", letterSpacing: "0.1em" }}>
-              {propertyName.toUpperCase()} &nbsp;&mdash;&nbsp; GPS GUIDED ROUTES
+              ZEBULA GOLF ESTATE &amp; SPA &nbsp;&mdash;&nbsp; GPS GUIDED ROUTES
+            </p>
+            <p style={{ fontSize: 10, color: "#9cad9f", marginTop: 4, letterSpacing: "0.06em" }}>
+              Developed by Anro Kruger
             </p>
           </footer>
         </main>

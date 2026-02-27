@@ -65,14 +65,14 @@ export const deleteHouse = (id: string): void => {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 export const getConfig = (): PropertyConfig => {
-  if (!isBrowser) return { receptionPoint: null, defaultZoom: 16, propertyName: "My Property" }
+  if (!isBrowser) return { receptionPoint: null, defaultZoom: 16, propertyName: "Zebula Golf Estate & Spa" }
   try {
     const data = localStorage.getItem(CONFIG_KEY)
     return data
       ? JSON.parse(data)
-      : { receptionPoint: null, defaultZoom: 16, propertyName: "My Property" }
+      : { receptionPoint: null, defaultZoom: 16, propertyName: "Zebula Golf Estate & Spa" }
   } catch {
-    return { receptionPoint: null, defaultZoom: 16, propertyName: "My Property" }
+    return { receptionPoint: null, defaultZoom: 16, propertyName: "Zebula Golf Estate & Spa" }
   }
 }
 
@@ -105,5 +105,32 @@ export const isAuthenticated = (): boolean => {
     return localStorage.getItem(AUTH_KEY) === "authenticated"
   } catch {
     return false
+  }
+}
+
+// ─── Sync / Export / Import ───────────────────────────────────────────────────
+
+export const exportAllData = (): string => {
+  const houses = getHouses()
+  const config = getConfig()
+  const payload = { houses, config, exportedAt: new Date().toISOString(), version: 1 }
+  return btoa(JSON.stringify(payload))
+}
+
+export const importAllData = (code: string): { success: boolean; message: string; houseCount: number } => {
+  if (!isBrowser) return { success: false, message: "Not in browser", houseCount: 0 }
+  try {
+    const raw = atob(code.trim())
+    const payload = JSON.parse(raw)
+    if (!payload.houses || !Array.isArray(payload.houses)) {
+      return { success: false, message: "Invalid sync code format.", houseCount: 0 }
+    }
+    localStorage.setItem(HOUSES_KEY, JSON.stringify(payload.houses))
+    if (payload.config) {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(payload.config))
+    }
+    return { success: true, message: `Imported ${payload.houses.length} house(s) successfully.`, houseCount: payload.houses.length }
+  } catch {
+    return { success: false, message: "Invalid or corrupted sync code. Please try again.", houseCount: 0 }
   }
 }

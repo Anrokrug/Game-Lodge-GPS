@@ -28,7 +28,7 @@ function loadLeaflet(): Promise<any> {
       const link = document.createElement("link")
       link.id = "leaflet-css"
       link.rel = "stylesheet"
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      link.href = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
       link.crossOrigin = "anonymous"
       document.head.appendChild(link)
     }
@@ -37,7 +37,7 @@ function loadLeaflet(): Promise<any> {
     if (!document.getElementById("leaflet-js")) {
       const script = document.createElement("script")
       script.id = "leaflet-js"
-      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      script.src = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
       script.crossOrigin = "anonymous"
       script.onload = () => resolve((window as any).L)
       document.head.appendChild(script)
@@ -85,9 +85,9 @@ export default function AdminMap({
 
       delete L.Icon.Default.prototype._getIconUrl
       L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        iconRetinaUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        iconUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png",
+        shadowUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-shadow.png",
       })
 
       const center = getDefaultCenter()
