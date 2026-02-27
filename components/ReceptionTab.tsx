@@ -20,9 +20,9 @@ export default function ReceptionTab({ config, onSave }: Props) {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
   const [errorMsg, setErrorMsg] = useState("")
   const [saved, setSaved] = useState<LatLng | null>(config?.receptionPoint ?? null)
-  const [showManual, setShowManual] = useState(false)
-  const [manualLat, setManualLat] = useState("")
-  const [manualLng, setManualLng] = useState("")
+  const [showManual, setShowManual] = useState(true)
+  const [manualLat, setManualLat] = useState(config?.receptionPoint ? String(config.receptionPoint.lat) : "")
+  const [manualLng, setManualLng] = useState(config?.receptionPoint ? String(config.receptionPoint.lng) : "")
 
   const saveLocation = async (latlng: LatLng) => {
     const res = await fetch("/api/config", {

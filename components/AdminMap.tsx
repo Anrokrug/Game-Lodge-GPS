@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
-import type { LatLng } from "@/lib/storage"
+import type { LatLng } from "@/lib/types"
 
 interface AdminMapProps {
   mode: "reception" | "record"
@@ -12,17 +12,25 @@ interface AdminMapProps {
   isRecording?: boolean
 }
 
-async function loadLeaflet(): Promise<any> {
-  const L = (await import("leaflet")).default
-  // Inject Leaflet CSS once
-  if (!document.getElementById("leaflet-css")) {
-    const link = document.createElement("link")
-    link.id = "leaflet-css"
-    link.rel = "stylesheet"
-    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    document.head.appendChild(link)
-  }
-  return L
+function loadLeaflet(): Promise<any> {
+  return new Promise((resolve) => {
+    if ((window as any).L) { resolve((window as any).L); return }
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link")
+      link.id = "leaflet-css"; link.rel = "stylesheet"
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      document.head.appendChild(link)
+    }
+    if (document.getElementById("leaflet-js")) {
+      const wait = setInterval(() => { if ((window as any).L) { clearInterval(wait); resolve((window as any).L) } }, 50)
+      return
+    }
+    const script = document.createElement("script")
+    script.id = "leaflet-js"
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    script.onload = () => resolve((window as any).L)
+    document.head.appendChild(script)
+  })
 }
 
 export default function AdminMap({
@@ -112,7 +120,6 @@ export default function AdminMap({
     if (mode === "reception") {
       m.on("click", (e: any) => {
         const latlng: LatLng = { lat: e.latlng.lat, lng: e.latlng.lng }
-        console.log("[v0] AdminMap click, ref:", !!onReceptionSetRef.current, "latlng:", latlng)
         if (onReceptionSetRef.current) onReceptionSetRef.current(latlng)
       })
     }
