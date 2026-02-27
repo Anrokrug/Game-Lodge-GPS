@@ -12,8 +12,9 @@ import {
   MapPin, LogOut, Plus, Trash2, Home, Navigation,
   Settings, CheckCircle, AlertCircle, Edit3, Loader2,
 } from "lucide-react"
-import AdminMap from "@/components/AdminMap"
+import dynamic from "next/dynamic"
 import ReceptionTab from "@/components/ReceptionTab"
+const AdminMap = dynamic(() => import("@/components/AdminMap"), { ssr: false })
 
 type Tab = "houses" | "reception" | "record"
 

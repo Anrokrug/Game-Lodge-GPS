@@ -2,53 +2,41 @@ import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 
 function getSQL() {
-  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set")
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set")
   return neon(process.env.DATABASE_URL)
 }
 
-async function ensureTable() {
+async function ensureReady() {
   const sql = getSQL()
-
-  // Drop and recreate if the column type is wrong (JSONB instead of TEXT)
-  await sql`
-    DO $$
-    BEGIN
-      IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'property_config'
-        AND column_name = 'reception_point'
-        AND data_type = 'jsonb'
-      ) THEN
-        DROP TABLE property_config;
-      END IF;
-    END$$
-  `
-
+  // Create table with lat/lng columns — plain numbers, no JSONB
   await sql`
     CREATE TABLE IF NOT EXISTS property_config (
       id INTEGER PRIMARY KEY,
-      reception_point TEXT,
+      lat DOUBLE PRECISION,
+      lng DOUBLE PRECISION,
       default_zoom INTEGER DEFAULT 16,
       property_name TEXT DEFAULT 'Zebula Golf Estate & Spa'
     )
   `
   await sql`
-    INSERT INTO property_config (id, reception_point, default_zoom, property_name)
-    VALUES (1, NULL, 16, 'Zebula Golf Estate & Spa')
+    INSERT INTO property_config (id, default_zoom, property_name)
+    VALUES (1, 16, 'Zebula Golf Estate & Spa')
     ON CONFLICT (id) DO NOTHING
   `
+  // Add lat/lng columns if old table existed without them
+  await sql`ALTER TABLE property_config ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION`
+  await sql`ALTER TABLE property_config ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`
 }
 
 export async function GET() {
   try {
+    await ensureReady()
     const sql = getSQL()
-    await ensureTable()
     const rows = await sql`SELECT * FROM property_config WHERE id = 1`
     const row = rows[0]
-    let receptionPoint = null
-    if (row?.reception_point) {
-      try { receptionPoint = typeof row.reception_point === "string" ? JSON.parse(row.reception_point) : row.reception_point } catch {}
-    }
+    const receptionPoint = (row?.lat != null && row?.lng != null)
+      ? { lat: Number(row.lat), lng: Number(row.lng) }
+      : null
     return NextResponse.json({
       config: {
         receptionPoint,
@@ -56,39 +44,33 @@ export async function GET() {
         propertyName: row?.property_name ?? "Zebula Golf Estate & Spa",
       },
     })
-  } catch (e) {
-    console.error("GET /api/config error:", e)
-    return NextResponse.json({
-      config: { receptionPoint: null, defaultZoom: 16, propertyName: "Zebula Golf Estate & Spa" },
-    })
+  } catch (e: any) {
+    console.error("GET /api/config:", e?.message)
+    return NextResponse.json({ config: { receptionPoint: null, defaultZoom: 16, propertyName: "Zebula Golf Estate & Spa" } })
   }
 }
 
 export async function POST(req: Request) {
   try {
+    await ensureReady()
     const sql = getSQL()
-    await ensureTable()
     const body = await req.json()
 
-    if (body.receptionPoint !== undefined) {
-      // Pass the object directly — Neon serialises objects as JSONB automatically
-      const rp = body.receptionPoint
-      await sql`
-        UPDATE property_config
-        SET reception_point = ${JSON.stringify(rp)}
-        WHERE id = 1
-      `
+    if (body.receptionPoint !== undefined && body.receptionPoint !== null) {
+      const lat = Number(body.receptionPoint.lat)
+      const lng = Number(body.receptionPoint.lng)
+      await sql`UPDATE property_config SET lat = ${lat}, lng = ${lng} WHERE id = 1`
     }
     if (body.defaultZoom !== undefined) {
-      await sql`UPDATE property_config SET default_zoom = ${body.defaultZoom} WHERE id = 1`
+      await sql`UPDATE property_config SET default_zoom = ${Number(body.defaultZoom)} WHERE id = 1`
     }
     if (body.propertyName !== undefined) {
-      await sql`UPDATE property_config SET property_name = ${body.propertyName} WHERE id = 1`
+      await sql`UPDATE property_config SET property_name = ${String(body.propertyName)} WHERE id = 1`
     }
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error("POST /api/config error:", e?.message ?? e)
-    return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 })
+    console.error("POST /api/config:", e?.message)
+    return NextResponse.json({ error: e?.message ?? "Failed" }, { status: 500 })
   }
 }
