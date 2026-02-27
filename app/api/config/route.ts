@@ -49,13 +49,22 @@ export async function POST(req: Request) {
     const sql = getSQL()
     await ensureTable()
     const body = await req.json()
-    await sql`
-      UPDATE property_config SET
-        reception_point = COALESCE(${body.receptionPoint ? JSON.stringify(body.receptionPoint) : null}::jsonb, reception_point),
-        default_zoom    = COALESCE(${body.defaultZoom ?? null}, default_zoom),
-        property_name   = COALESCE(${body.propertyName ?? null}, property_name)
-      WHERE id = 1
-    `
+
+    if (body.receptionPoint !== undefined) {
+      const rp = JSON.stringify(body.receptionPoint)
+      await sql`
+        UPDATE property_config
+        SET reception_point = ${rp}::jsonb
+        WHERE id = 1
+      `
+    }
+    if (body.defaultZoom !== undefined) {
+      await sql`UPDATE property_config SET default_zoom = ${body.defaultZoom} WHERE id = 1`
+    }
+    if (body.propertyName !== undefined) {
+      await sql`UPDATE property_config SET property_name = ${body.propertyName} WHERE id = 1`
+    }
+
     return NextResponse.json({ success: true })
   } catch (e) {
     console.error("POST /api/config error:", e)
