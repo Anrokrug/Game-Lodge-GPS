@@ -8,6 +8,22 @@ function getSQL() {
 
 async function ensureTable() {
   const sql = getSQL()
+
+  // Drop and recreate if the column type is wrong (JSONB instead of TEXT)
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'property_config'
+        AND column_name = 'reception_point'
+        AND data_type = 'jsonb'
+      ) THEN
+        DROP TABLE property_config;
+      END IF;
+    END$$
+  `
+
   await sql`
     CREATE TABLE IF NOT EXISTS property_config (
       id INTEGER PRIMARY KEY,
