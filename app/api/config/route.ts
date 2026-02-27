@@ -8,14 +8,34 @@ function getSQL() {
 
 async function ensureTable() {
   const sql = getSQL()
-  await sql`
-    CREATE TABLE IF NOT EXISTS property_config (
-      id               INTEGER PRIMARY KEY,
-      reception_point  JSONB,
-      default_zoom     INTEGER DEFAULT 16,
-      property_name    TEXT DEFAULT 'Zebula Golf Estate & Spa'
-    )
+
+  // Check if the column exists and has the right type
+  const colCheck = await sql`
+    SELECT data_type FROM information_schema.columns
+    WHERE table_name = 'property_config' AND column_name = 'reception_point'
   `
+
+  const colType = colCheck[0]?.data_type
+
+  // If column is not jsonb (e.g. it's text, or broken, or doesn't exist at all) — drop and recreate
+  if (colType !== "jsonb") {
+    await sql`DROP TABLE IF EXISTS property_config`
+    await sql`
+      CREATE TABLE property_config (
+        id               INTEGER PRIMARY KEY,
+        reception_point  JSONB,
+        default_zoom     INTEGER DEFAULT 16,
+        property_name    TEXT DEFAULT 'Zebula Golf Estate & Spa'
+      )
+    `
+    await sql`
+      INSERT INTO property_config (id, default_zoom, property_name)
+      VALUES (1, 16, 'Zebula Golf Estate & Spa')
+    `
+    return
+  }
+
+  // Table is correct — just ensure the row exists
   await sql`
     INSERT INTO property_config (id, default_zoom, property_name)
     VALUES (1, 16, 'Zebula Golf Estate & Spa')
