@@ -24,6 +24,7 @@ export default function ClientPage() {
   const [gpsLoading, setGpsLoading] = useState(false)
   const [arrived, setArrived] = useState(false)
   const [receptionPoint, setReceptionPoint] = useState<LatLng | null>(null)
+  const watchIdRef = useRef<number | null>(null)
 
   useEffect(() => {
     async function load() {
