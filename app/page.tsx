@@ -223,7 +223,7 @@ export default function ClientPage() {
                   </button>
                 ))}
               </div>
-            ) : null}
+            )}
           </section>
 
           <footer style={{ borderTop: "1px solid #dddbd4", padding: "16px 0", textAlign: "center" }}>
