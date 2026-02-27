@@ -67,27 +67,4 @@ export async function updateConfig(config: Partial<PropertyConfig>): Promise<voi
   })
 }
 
-// ─── Auth (still localStorage — session only) ────────────────────────────────
-
-const AUTH_KEY = "property_nav_auth"
-const ADMIN_PASSWORD = "zebula2025"
-
-const isBrowser = typeof window !== "undefined"
-
-export function login(password: string): boolean {
-  if (!isBrowser) return false
-  if (password === ADMIN_PASSWORD) {
-    localStorage.setItem(AUTH_KEY, "authenticated")
-    return true
-  }
-  return false
-}
-
-export function logout(): void {
-  if (isBrowser) localStorage.removeItem(AUTH_KEY)
-}
-
-export function isAuthenticated(): boolean {
-  if (!isBrowser) return false
-  try { return localStorage.getItem(AUTH_KEY) === "authenticated" } catch { return false }
-}
+// Auth is in @/lib/auth

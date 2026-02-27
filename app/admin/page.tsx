@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { login, isAuthenticated } from "@/lib/storage"
+import { login, isAuthenticated } from "@/lib/auth"
 import { Eye, EyeOff, MapPin, ArrowRight, Check } from "lucide-react"
 
 const SERIF = "'Playfair Display', Georgia, serif"

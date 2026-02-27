@@ -82,6 +82,10 @@ export default function ClientMap({ path, receptionPoint, currentPosition, desti
 
       mapInstanceRef.current = map
 
+      // Force Leaflet to recalculate container size after paint
+      setTimeout(() => map.invalidateSize(), 100)
+      setTimeout(() => map.invalidateSize(), 400)
+
       // Draw route polyline
       if (path.length > 1) {
         const coords: [number, number][] = path.map((p) => [p.lat, p.lng])

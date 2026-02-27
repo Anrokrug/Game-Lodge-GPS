@@ -100,6 +100,10 @@ export default function AdminMap({
 
       mapInstanceRef.current = m
 
+      // Force Leaflet to recalculate container size after paint
+      setTimeout(() => m.invalidateSize(), 100)
+      setTimeout(() => m.invalidateSize(), 400)
+
       // Reception marker
       if (receptionPoint) {
         const recIcon = L.divIcon({

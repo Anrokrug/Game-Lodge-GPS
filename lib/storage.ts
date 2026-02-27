@@ -84,7 +84,7 @@ export const saveConfig = (config: Partial<PropertyConfig>): void => {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
-const ADMIN_PASSWORD = "admin1234" // Change this to your preferred password
+const ADMIN_PASSWORD = "Zebula@2025"
 
 export const login = (password: string): boolean => {
   if (!isBrowser) return false
