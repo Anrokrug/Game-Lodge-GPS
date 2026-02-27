@@ -11,31 +11,16 @@ interface ClientMapProps {
   initialPosition?: LatLng | null
 }
 
-function loadLeaflet(): Promise<any> {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined") return
-    if ((window as any).L) { resolve((window as any).L); return }
-    if (!document.getElementById("leaflet-css")) {
-      const link = document.createElement("link")
-      link.id = "leaflet-css"
-      link.rel = "stylesheet"
-      link.href = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
-      link.crossOrigin = "anonymous"
-      document.head.appendChild(link)
-    }
-    if (!document.getElementById("leaflet-js")) {
-      const script = document.createElement("script")
-      script.id = "leaflet-js"
-      script.src = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
-      script.crossOrigin = "anonymous"
-      script.onload = () => resolve((window as any).L)
-      document.head.appendChild(script)
-    } else {
-      const wait = setInterval(() => {
-        if ((window as any).L) { clearInterval(wait); resolve((window as any).L) }
-      }, 50)
-    }
-  })
+async function loadLeaflet(): Promise<any> {
+  const L = (await import("leaflet")).default
+  if (!document.getElementById("leaflet-css")) {
+    const link = document.createElement("link")
+    link.id = "leaflet-css"
+    link.rel = "stylesheet"
+    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    document.head.appendChild(link)
+  }
+  return L
 }
 
 function getUserLocation(): Promise<[number, number] | null> {
@@ -64,11 +49,6 @@ export default function ClientMap({ path, receptionPoint, currentPosition, desti
       if (!mapDivRef.current) return
 
       delete (L.Icon.Default.prototype as any)._getIconUrl
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        iconUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-shadow.png",
-      })
 
       // Center priority: already-granted GPS → reception point → first path point
       let center: [number, number]

@@ -12,32 +12,17 @@ interface AdminMapProps {
   isRecording?: boolean
 }
 
-function loadLeaflet(): Promise<any> {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined") return
-    if ((window as any).L) { resolve((window as any).L); return }
-    if (!document.getElementById("leaflet-css")) {
-      const link = document.createElement("link")
-      link.id = "leaflet-css"
-      link.rel = "stylesheet"
-      link.href = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
-      link.crossOrigin = "anonymous"
-      document.head.appendChild(link)
-    }
-    const existing = document.getElementById("leaflet-js")
-    if (existing) {
-      const wait = setInterval(() => {
-        if ((window as any).L) { clearInterval(wait); resolve((window as any).L) }
-      }, 50)
-      return
-    }
-    const script = document.createElement("script")
-    script.id = "leaflet-js"
-    script.src = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
-    script.crossOrigin = "anonymous"
-    script.onload = () => resolve((window as any).L)
-    document.head.appendChild(script)
-  })
+async function loadLeaflet(): Promise<any> {
+  const L = (await import("leaflet")).default
+  // Inject Leaflet CSS once
+  if (!document.getElementById("leaflet-css")) {
+    const link = document.createElement("link")
+    link.id = "leaflet-css"
+    link.rel = "stylesheet"
+    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    document.head.appendChild(link)
+  }
+  return L
 }
 
 export default function AdminMap({
@@ -67,12 +52,8 @@ export default function AdminMap({
     const L = await loadLeaflet()
     if (!mapRef.current || mapInstanceRef.current) return
 
+    // Suppress default icon URL lookup — we use divIcons everywhere
     delete (L.Icon.Default.prototype as any)._getIconUrl
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      iconUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png",
-      shadowUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-shadow.png",
-    })
 
     // Center: receptionPoint → recorded path → Zebula fallback
     let center: [number, number] = [-24.3, 27.5]

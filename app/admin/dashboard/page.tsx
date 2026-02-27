@@ -13,6 +13,7 @@ import {
   Settings, CheckCircle, AlertCircle, Edit3, Loader2,
 } from "lucide-react"
 import AdminMap from "@/components/AdminMap"
+import ReceptionTab from "@/components/ReceptionTab"
 
 type Tab = "houses" | "reception" | "record"
 
@@ -48,9 +49,7 @@ export default function AdminDashboard() {
   const [currentPosition, setCurrentPosition] = useState<LatLng | null>(null)
   const [gpsError, setGpsError] = useState("")
 
-  // Reception GPS
-  const [receptionGpsLoading, setReceptionGpsLoading] = useState(false)
-  const [receptionGpsError, setReceptionGpsError] = useState("")
+
 
   // Houses
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -137,37 +136,9 @@ export default function AdminDashboard() {
   }, [deleteConfirm, refreshHouses])
 
   const handleSetReception = async (latlng: LatLng) => {
-    console.log("[v0] handleSetReception called with:", latlng)
-    try {
-      await updateConfig({ receptionPoint: latlng })
-      console.log("[v0] updateConfig done")
-      const cfg = await fetchConfig()
-      console.log("[v0] fetchConfig result:", cfg)
-      setConfig(cfg)
-    } catch (e) {
-      console.error("[v0] handleSetReception error:", e)
-    }
-  }
-
-  const handleUseMyLocation = () => {
-    console.log("[v0] handleUseMyLocation called")
-    if (!navigator.geolocation) { setReceptionGpsError("GPS not supported on this device."); return }
-    setReceptionGpsLoading(true)
-    setReceptionGpsError("")
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const latlng: LatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        console.log("[v0] GPS position obtained:", latlng)
-        await handleSetReception(latlng)
-        setReceptionGpsLoading(false)
-      },
-      (err) => {
-        console.error("[v0] GPS error:", err.message)
-        setReceptionGpsError("Could not get location: " + err.message)
-        setReceptionGpsLoading(false)
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    )
+    await updateConfig({ receptionPoint: latlng })
+    const cfg = await fetchConfig()
+    setConfig(cfg)
   }
 
   const inputStyle: React.CSSProperties = {
@@ -312,67 +283,10 @@ export default function AdminDashboard() {
 
         {/* ── RECEPTION TAB ── */}
         {activeTab === "reception" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.12em", marginBottom: 6 }}>CONFIGURATION</p>
-              <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#1a2a1e" }}>Reception Point</h2>
-              <p style={{ fontSize: 13, color: "#6b7c6e", marginTop: 6, lineHeight: 1.6 }}>
-                All guest navigation routes start from this location. Tap the map to set it, or use the button below to use your current GPS position.
-              </p>
-            </div>
-
-            {config?.receptionPoint ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 8, backgroundColor: "rgba(35,107,48,0.07)", border: "1px solid rgba(35,107,48,0.22)", flexWrap: "wrap" }}>
-                <CheckCircle size={17} color={SUCCESS} style={{ flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>Reception point is set</p>
-                  <p style={{ fontSize: 11, color: "#6b7c6e", fontFamily: "monospace", marginTop: 2 }}>
-                    {config.receptionPoint.lat.toFixed(6)}, {config.receptionPoint.lng.toFixed(6)}
-                  </p>
-                </div>
-                <button onClick={() => handleSetReception(config!.receptionPoint!)} style={btn(PRIMARY, "#fff", { flexShrink: 0 })}>
-                  <Edit3 size={12} /> Update
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 8, backgroundColor: "#eceae4", border: "1px solid #dddbd4" }}>
-                <AlertCircle size={17} color={AMBER} style={{ flexShrink: 0 }} />
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>No reception point set yet</p>
-                  <p style={{ fontSize: 12, color: "#6b7c6e", marginTop: 2 }}>Use the button below or tap anywhere on the map.</p>
-                </div>
-              </div>
-            )}
-
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <button
-                onClick={handleUseMyLocation}
-                disabled={receptionGpsLoading}
-                style={btn(PRIMARY, "#fff", { opacity: receptionGpsLoading ? 0.7 : 1 })}
-              >
-                {receptionGpsLoading
-                  ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
-                  : <MapPin size={14} />}
-                {receptionGpsLoading ? "Getting location…" : "Use My Current Location"}
-              </button>
-              <span style={{ fontSize: 12, color: "#6b7c6e" }}>— or tap anywhere on the map below</span>
-            </div>
-
-            {receptionGpsError && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 8, backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}>
-                <AlertCircle size={15} color={DESTRUCTIVE} />
-                <p style={{ fontSize: 13, color: DESTRUCTIVE }}>{receptionGpsError}</p>
-              </div>
-            )}
-
-            <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", height: 420 }}>
-              <AdminMap
-                mode="reception"
-                receptionPoint={config?.receptionPoint ?? null}
-                onReceptionSet={handleSetReception}
-              />
-            </div>
-          </div>
+          <ReceptionTab
+            config={config}
+            onSave={handleSetReception}
+          />
         )}
 
         {/* ── RECORD PATH TAB ── */}
