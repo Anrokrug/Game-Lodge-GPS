@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 
-const sql = neon(process.env.DATABASE_URL!)
+function getSQL() {
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set")
+  return neon(process.env.DATABASE_URL)
+}
 
-// Create tables if they don't exist on first run
 async function ensureTables() {
+  const sql = getSQL()
   await sql`
     CREATE TABLE IF NOT EXISTS houses (
       id TEXT PRIMARY KEY,
@@ -19,6 +22,7 @@ async function ensureTables() {
 
 export async function GET() {
   try {
+    const sql = getSQL()
     await ensureTables()
     const rows = await sql`SELECT * FROM houses ORDER BY created_at ASC`
     const houses = rows.map((r) => ({
@@ -38,10 +42,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const sql = getSQL()
     await ensureTables()
     const body = await req.json()
 
-    // Bulk import
     if (Array.isArray(body)) {
       await sql`DELETE FROM houses`
       for (const h of body) {
@@ -54,7 +58,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, count: body.length })
     }
 
-    // Single house
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
     await sql`
@@ -70,6 +73,7 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const sql = getSQL()
     const { id } = await req.json()
     await sql`DELETE FROM houses WHERE id = ${id}`
     return NextResponse.json({ success: true })
