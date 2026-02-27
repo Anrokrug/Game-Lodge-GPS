@@ -354,7 +354,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", height: 420 }}>
+            <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", height: 420 }}>
               <AdminMap
                 mode="reception"
                 receptionPoint={config?.receptionPoint ?? null}
@@ -451,10 +451,10 @@ export default function AdminDashboard() {
             )}
 
             {recordedPath.length > 0 && (
-              <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", height: 380 }}>
+              <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", height: 380 }}>
                 <AdminMap
                   mode="record"
-                  receptionPoint={config.receptionPoint}
+                  receptionPoint={config?.receptionPoint ?? null}
                   recordedPath={recordedPath}
                   currentPosition={currentPosition}
                   isRecording={recording}

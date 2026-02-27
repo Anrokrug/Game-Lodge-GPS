@@ -315,8 +315,8 @@ export default function ClientPage() {
           </div>
 
           {/* Map */}
-          <div style={{ flex: 1, padding: "12px 16px 16px", maxWidth: 900, width: "100%", margin: "0 auto" }}>
-            <div style={{ height: "100%", minHeight: 420, borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
+          <div style={{ padding: "12px 16px 16px", maxWidth: 900, width: "100%", margin: "0 auto" }}>
+            <div style={{ position: "relative", height: 480, borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
               {receptionPoint ? (
                 <ClientMap
                   path={selectedHouse.path}

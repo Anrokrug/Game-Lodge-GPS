@@ -12,18 +12,10 @@ interface AdminMapProps {
   isRecording?: boolean
 }
 
-// Load Leaflet CSS + JS from CDN and return window.L
 function loadLeaflet(): Promise<any> {
   return new Promise((resolve) => {
     if (typeof window === "undefined") return
-
-    // Already loaded
-    if ((window as any).L) {
-      resolve((window as any).L)
-      return
-    }
-
-    // Inject CSS
+    if ((window as any).L) { resolve((window as any).L); return }
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link")
       link.id = "leaflet-css"
@@ -32,8 +24,6 @@ function loadLeaflet(): Promise<any> {
       link.crossOrigin = "anonymous"
       document.head.appendChild(link)
     }
-
-    // Inject JS
     if (!document.getElementById("leaflet-js")) {
       const script = document.createElement("script")
       script.id = "leaflet-js"
@@ -42,14 +32,21 @@ function loadLeaflet(): Promise<any> {
       script.onload = () => resolve((window as any).L)
       document.head.appendChild(script)
     } else {
-      // Script tag exists but may still be loading
       const wait = setInterval(() => {
-        if ((window as any).L) {
-          clearInterval(wait)
-          resolve((window as any).L)
-        }
+        if ((window as any).L) { clearInterval(wait); resolve((window as any).L) }
       }, 50)
     }
+  })
+}
+
+function getUserLocation(): Promise<[number, number] | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(null); return }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 6000 }
+    )
   })
 }
 
@@ -68,86 +65,89 @@ export default function AdminMap({
   const pathPolylineRef = useRef<any>(null)
   const initializedRef = useRef(false)
 
-  const getDefaultCenter = useCallback((): [number, number] => {
-    if (receptionPoint) return [receptionPoint.lat, receptionPoint.lng]
-    if (currentPosition) return [currentPosition.lat, currentPosition.lng]
-    if (recordedPath.length > 0) return [recordedPath[0].lat, recordedPath[0].lng]
-    return [-29.0, 25.0]
-  }, [receptionPoint, currentPosition, recordedPath])
-
-  // Initialise map once
-  useEffect(() => {
+  const initMap = useCallback(async () => {
     if (!mapRef.current || initializedRef.current) return
     initializedRef.current = true
 
-    loadLeaflet().then((L) => {
-      if (!mapRef.current) return
+    const [L, gpsPos] = await Promise.all([loadLeaflet(), getUserLocation()])
+    if (!mapRef.current) return
 
-      delete L.Icon.Default.prototype._getIconUrl
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        iconUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-shadow.png",
-      })
-
-      const center = getDefaultCenter()
-      const m = L.map(mapRef.current, { center, zoom: 16, zoomControl: true })
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
-        maxZoom: 22,
-      }).addTo(m)
-
-      mapInstanceRef.current = m
-
-      // Force Leaflet to recalculate container size after paint
-      setTimeout(() => m.invalidateSize(), 100)
-      setTimeout(() => m.invalidateSize(), 400)
-
-      // Reception marker
-      if (receptionPoint) {
-        const recIcon = L.divIcon({
-          className: "",
-          html: `<div style="background:#2d8a4e;border:3px solid white;border-radius:50%;width:22px;height:22px;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;"><span style="color:white;font-size:10px;font-weight:bold;">R</span></div>`,
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
-        })
-        receptionMarkerRef.current = L.marker([receptionPoint.lat, receptionPoint.lng], { icon: recIcon })
-          .addTo(m)
-          .bindPopup("<strong>Reception</strong><br/>Starting point")
-      }
-
-      // Click handler for reception mode
-      if (mode === "reception" && onReceptionSet) {
-        m.on("click", (e: any) => {
-          onReceptionSet({ lat: e.latlng.lat, lng: e.latlng.lng })
-        })
-      }
-
-      // Draw existing path
-      if (recordedPath.length > 0) {
-        const latLngs = recordedPath.map((p) => [p.lat, p.lng])
-        pathPolylineRef.current = L.polyline(latLngs, {
-          color: "#e67e22",
-          weight: 5,
-          opacity: 0.9,
-        }).addTo(m)
-        m.fitBounds(pathPolylineRef.current.getBounds(), { padding: [30, 30] })
-      }
-
-      // Current position marker
-      if (currentPosition) {
-        const posIcon = L.divIcon({
-          className: "",
-          html: `<div style="background:#3b82f6;border:3px solid white;border-radius:50%;width:18px;height:18px;box-shadow:0 0 0 4px rgba(59,130,246,0.3);"></div>`,
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
-        })
-        currentMarkerRef.current = L.marker([currentPosition.lat, currentPosition.lng], { icon: posIcon })
-          .addTo(m)
-      }
+    delete (L.Icon.Default.prototype as any)._getIconUrl
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      iconUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png",
+      shadowUrl: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-shadow.png",
     })
 
+    // Priority: receptionPoint → GPS → recorded path → fallback
+    let center: [number, number]
+    let zoom = 17
+    if (receptionPoint) {
+      center = [receptionPoint.lat, receptionPoint.lng]
+    } else if (gpsPos) {
+      center = gpsPos
+    } else if (recordedPath.length > 0) {
+      center = [recordedPath[0].lat, recordedPath[0].lng]
+    } else {
+      center = [-24.3, 27.5] // Limpopo area (Zebula region)
+      zoom = 13
+    }
+
+    const m = L.map(mapRef.current, { center, zoom, zoomControl: true })
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 22,
+    }).addTo(m)
+
+    mapInstanceRef.current = m
+
+    // Wait until container has real pixel dimensions before invalidating
+    const ensureSize = () => {
+      if (mapRef.current && mapRef.current.offsetHeight > 10) {
+        m.invalidateSize({ animate: false })
+      } else {
+        requestAnimationFrame(ensureSize)
+      }
+    }
+    requestAnimationFrame(ensureSize)
+
+    // Reception marker
+    if (receptionPoint) {
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="background:#1e4a28;border:3px solid #fff;border-radius:50%;width:24px;height:24px;box-shadow:0 2px 8px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;"><span style="color:#fff;font-size:11px;font-weight:800;">R</span></div>`,
+        iconSize: [24, 24], iconAnchor: [12, 12],
+      })
+      receptionMarkerRef.current = L.marker([receptionPoint.lat, receptionPoint.lng], { icon })
+        .addTo(m).bindPopup("<strong>Reception</strong>")
+    }
+
+    // GPS dot for current position
+    if (currentPosition) {
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="background:#3b82f6;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 0 0 5px rgba(59,130,246,0.3);"></div>`,
+        iconSize: [18, 18], iconAnchor: [9, 9],
+      })
+      currentMarkerRef.current = L.marker([currentPosition.lat, currentPosition.lng], { icon }).addTo(m)
+    }
+
+    // Existing path
+    if (recordedPath.length > 1) {
+      const coords = recordedPath.map((p) => [p.lat, p.lng])
+      pathPolylineRef.current = L.polyline(coords, { color: "#c47c2a", weight: 5, opacity: 0.9 }).addTo(m)
+      m.fitBounds(pathPolylineRef.current.getBounds(), { padding: [40, 40] })
+    }
+
+    // Click to set reception
+    if (mode === "reception" && onReceptionSet) {
+      m.on("click", (e: any) => onReceptionSet({ lat: e.latlng.lat, lng: e.latlng.lng }))
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    initMap()
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
@@ -155,92 +155,74 @@ export default function AdminMap({
         initializedRef.current = false
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [initMap])
 
-  // Update click handler when mode/callback changes
+  // Update click handler
   useEffect(() => {
     const m = mapInstanceRef.current
     if (!m || mode !== "reception") return
     m.off("click")
     if (onReceptionSet) {
-      m.on("click", (e: any) => {
-        onReceptionSet({ lat: e.latlng.lat, lng: e.latlng.lng })
-      })
+      m.on("click", (e: any) => onReceptionSet({ lat: e.latlng.lat, lng: e.latlng.lng }))
     }
   }, [onReceptionSet, mode])
 
-  // Update reception marker
+  // Update reception marker live
   useEffect(() => {
     const m = mapInstanceRef.current
-    if (!m) return
     const L = (window as any).L
-    if (!L) return
-
-    if (receptionMarkerRef.current) {
-      receptionMarkerRef.current.remove()
-      receptionMarkerRef.current = null
-    }
+    if (!m || !L) return
+    if (receptionMarkerRef.current) { receptionMarkerRef.current.remove(); receptionMarkerRef.current = null }
     if (receptionPoint) {
-      const recIcon = L.divIcon({
+      const icon = L.divIcon({
         className: "",
-        html: `<div style="background:#2d8a4e;border:3px solid white;border-radius:50%;width:22px;height:22px;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;"><span style="color:white;font-size:10px;font-weight:bold;">R</span></div>`,
-        iconSize: [22, 22],
-        iconAnchor: [11, 11],
+        html: `<div style="background:#1e4a28;border:3px solid #fff;border-radius:50%;width:24px;height:24px;box-shadow:0 2px 8px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;"><span style="color:#fff;font-size:11px;font-weight:800;">R</span></div>`,
+        iconSize: [24, 24], iconAnchor: [12, 12],
       })
-      receptionMarkerRef.current = L.marker([receptionPoint.lat, receptionPoint.lng], { icon: recIcon })
-        .addTo(m)
-        .bindPopup("<strong>Reception</strong>")
-      m.setView([receptionPoint.lat, receptionPoint.lng], Math.max(m.getZoom(), 16))
+      receptionMarkerRef.current = L.marker([receptionPoint.lat, receptionPoint.lng], { icon })
+        .addTo(m).bindPopup("<strong>Reception</strong>")
+      m.setView([receptionPoint.lat, receptionPoint.lng], Math.max(m.getZoom(), 17))
     }
   }, [receptionPoint])
 
-  // Update path polyline
+  // Update path polyline live
   useEffect(() => {
     const m = mapInstanceRef.current
-    if (!m) return
     const L = (window as any).L
-    if (!L) return
-
-    if (pathPolylineRef.current) {
-      pathPolylineRef.current.remove()
-      pathPolylineRef.current = null
-    }
+    if (!m || !L) return
+    if (pathPolylineRef.current) { pathPolylineRef.current.remove(); pathPolylineRef.current = null }
     if (recordedPath.length > 1) {
-      const latLngs = recordedPath.map((p) => [p.lat, p.lng])
-      pathPolylineRef.current = L.polyline(latLngs, {
-        color: "#e67e22",
-        weight: 5,
-        opacity: 0.9,
-        dashArray: isRecording ? "10, 6" : undefined,
+      const coords = recordedPath.map((p) => [p.lat, p.lng])
+      pathPolylineRef.current = L.polyline(coords, {
+        color: "#c47c2a", weight: 5, opacity: 0.9,
+        dashArray: isRecording ? "10,6" : undefined,
       }).addTo(m)
     }
   }, [recordedPath, isRecording])
 
-  // Follow user position
+  // Follow current GPS position
   useEffect(() => {
     const m = mapInstanceRef.current
-    if (!m || !currentPosition) return
     const L = (window as any).L
-    if (!L) return
-
+    if (!m || !L || !currentPosition) return
     if (currentMarkerRef.current) {
       currentMarkerRef.current.setLatLng([currentPosition.lat, currentPosition.lng])
     } else {
-      const posIcon = L.divIcon({
+      const icon = L.divIcon({
         className: "",
-        html: `<div style="background:#3b82f6;border:3px solid white;border-radius:50%;width:18px;height:18px;box-shadow:0 0 0 4px rgba(59,130,246,0.3);"></div>`,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
+        html: `<div style="background:#3b82f6;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 0 0 5px rgba(59,130,246,0.3);"></div>`,
+        iconSize: [18, 18], iconAnchor: [9, 9],
       })
-      currentMarkerRef.current = L.marker([currentPosition.lat, currentPosition.lng], { icon: posIcon })
-        .addTo(m)
+      currentMarkerRef.current = L.marker([currentPosition.lat, currentPosition.lng], { icon }).addTo(m)
     }
-
     if (isRecording) {
-      m.setView([currentPosition.lat, currentPosition.lng], Math.max(m.getZoom(), 17), { animate: true })
+      m.setView([currentPosition.lat, currentPosition.lng], Math.max(m.getZoom(), 17), { animate: true, duration: 0.5 })
     }
   }, [currentPosition, isRecording])
 
-  return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <div ref={mapRef} style={{ position: "absolute", inset: 0 }} />
+    </div>
+  )
 }
