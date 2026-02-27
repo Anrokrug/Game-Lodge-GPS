@@ -4,24 +4,13 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import dynamic from "next/dynamic"
 import { getHouses, getConfig, type House, type LatLng } from "@/lib/storage"
 import {
-  MapPin,
-  Home,
-  Navigation,
-  ArrowLeft,
-  CheckCircle,
-  AlertCircle,
-  Locate,
-  ChevronRight,
+  MapPin, Home, Navigation, ArrowLeft, CheckCircle,
+  AlertCircle, Locate, ChevronRight, Map,
 } from "lucide-react"
 
 const ClientMap = dynamic(() => import("@/components/ClientMap"), { ssr: false })
 
 type Screen = "select" | "navigate"
-
-const DARK_GREEN = "#122918"
-const AMBER = "#c47c2a"
-const SUCCESS = "#236b30"
-const DESTRUCTIVE = "#b03a2e"
 
 export default function ClientPage() {
   const [houses, setHouses] = useState<House[]>([])
@@ -101,123 +90,161 @@ export default function ClientPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#f7f5f0", fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#f7f5f0" }}>
 
-      {/* NAV */}
-      <header className="sticky top-0 z-50" style={{ backgroundColor: DARK_GREEN, color: "#f0ede6" }}>
-        <div className="max-w-5xl mx-auto px-5 py-4 flex items-center gap-4">
+      {/* ── HEADER ── */}
+      <header className="sticky top-0 z-50 shadow-sm" style={{ backgroundColor: "#122918" }}>
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
           {screen === "navigate" && (
             <button
               onClick={handleBack}
-              className="p-2 rounded-md transition-colors"
-              style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
               aria-label="Back"
+              className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0 transition-colors"
+              style={{ color: "rgba(240,237,230,0.7)", background: "rgba(255,255,255,0.08)" }}
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft size={16} />
             </button>
           )}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: AMBER }}>
-              <MapPin className="w-4 h-4 text-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-base font-semibold leading-tight truncate" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-                {propertyName}
-              </p>
-              <p className="text-xs opacity-50 leading-tight tracking-widest uppercase">
-                {screen === "navigate" && selectedHouse ? selectedHouse.name : "Guest Navigation"}
-              </p>
-            </div>
+          <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#c47c2a" }}>
+            <MapPin size={14} color="#fff" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p
+              className="text-sm font-semibold leading-none truncate"
+              style={{ color: "#f0ede6", fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)" }}
+            >
+              {propertyName}
+            </p>
+            <p className="text-xs mt-0.5 leading-none" style={{ color: "rgba(240,237,230,0.45)", letterSpacing: "0.1em" }}>
+              {screen === "navigate" && selectedHouse ? selectedHouse.name.toUpperCase() : "GUEST NAVIGATION"}
+            </p>
           </div>
           <a
             href="/admin"
-            className="text-xs uppercase tracking-widest px-3 py-1.5 rounded transition-colors"
-            style={{ border: "1px solid rgba(255,255,255,0.2)", color: "rgba(240,237,230,0.8)" }}
+            className="flex-shrink-0 px-3 py-1.5 rounded text-xs font-medium transition-colors"
+            style={{ border: "1px solid rgba(255,255,255,0.18)", color: "rgba(240,237,230,0.65)" }}
           >
             Admin
           </a>
         </div>
       </header>
 
-      {/* HOUSE SELECTION */}
+      {/* ── HOUSE SELECTION SCREEN ── */}
       {screen === "select" && (
         <main className="flex-1 flex flex-col">
 
-          {/* Hero */}
-          <div className="pb-10 pt-8 px-5" style={{ backgroundColor: DARK_GREEN, color: "#f0ede6" }}>
-            <div className="max-w-5xl mx-auto">
-              <p className="text-xs uppercase tracking-widest mb-2" style={{ opacity: 0.5 }}>
-                Welcome to {propertyName}
+          {/* Hero banner */}
+          <section style={{ backgroundColor: "#122918" }}>
+            <div className="max-w-5xl mx-auto px-5 pt-10 pb-12">
+              <p
+                className="text-xs font-medium mb-3"
+                style={{ color: "rgba(240,237,230,0.45)", letterSpacing: "0.14em" }}
+              >
+                WELCOME
               </p>
-              <h1 className="text-4xl md:text-5xl font-bold leading-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+              <h1
+                className="text-4xl md:text-5xl font-bold leading-tight mb-3"
+                style={{
+                  color: "#f0ede6",
+                  fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)",
+                }}
+              >
                 Where would you<br />like to go?
               </h1>
-              <p className="mt-3 text-sm leading-relaxed max-w-sm" style={{ opacity: 0.6 }}>
-                Select your destination and we will guide you along the recorded route.
+              <p className="text-sm leading-relaxed max-w-md" style={{ color: "rgba(240,237,230,0.55)" }}>
+                Select a destination below and we will guide you along the recorded road.
               </p>
             </div>
-          </div>
-
-          {/* Wave */}
-          <div style={{ backgroundColor: DARK_GREEN }}>
-            <svg viewBox="0 0 1440 40" className="w-full block" preserveAspectRatio="none" style={{ height: 40 }}>
-              <path d="M0,40 C360,0 1080,0 1440,40 L1440,40 L0,40 Z" fill="#f7f5f0" />
+            {/* SVG wave transition */}
+            <svg viewBox="0 0 1440 48" xmlns="http://www.w3.org/2000/svg" style={{ display: "block", height: 48 }} preserveAspectRatio="none">
+              <path d="M0,48 C480,0 960,0 1440,48 L1440,48 L0,48 Z" fill="#f7f5f0" />
             </svg>
-          </div>
+          </section>
 
-          {/* Cards */}
-          <div className="flex-1 max-w-5xl w-full mx-auto px-5 py-8">
+          {/* House cards */}
+          <section className="flex-1 max-w-5xl w-full mx-auto px-4 py-8">
             {houses.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ border: "2px solid #dddbd4" }}>
-                  <Home className="w-7 h-7" style={{ color: "#6b7c6e" }} />
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mb-5"
+                  style={{ border: "2px solid #dddbd4" }}
+                >
+                  <Home size={28} style={{ color: "#6b7c6e" }} />
                 </div>
-                <h3 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1a2a1e" }}>
+                <h2
+                  className="text-2xl font-bold mb-2"
+                  style={{ fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)", color: "#1a2a1e" }}
+                >
                   No destinations yet
-                </h3>
-                <p className="text-sm mt-2 max-w-xs leading-relaxed" style={{ color: "#6b7c6e" }}>
-                  The property owner needs to record paths via the admin panel first.
+                </h2>
+                <p className="text-sm leading-relaxed max-w-xs mb-6" style={{ color: "#6b7c6e" }}>
+                  The property owner needs to record paths using the admin panel first.
                 </p>
                 <a
                   href="/admin"
-                  className="mt-6 px-5 py-2.5 text-sm font-medium rounded transition-all"
+                  className="px-5 py-2.5 rounded text-sm font-medium"
                   style={{ backgroundColor: "#1e4a28", color: "#f7f5f0" }}
                 >
                   Open Admin Panel
                 </a>
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {houses.map((house, index) => (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {houses.map((house, i) => (
                   <button
                     key={house.id}
                     onClick={() => handleSelectHouse(house)}
-                    className="group text-left rounded p-5 transition-all duration-200 active:scale-[0.98] hover:shadow-lg"
+                    className="group text-left rounded-lg p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]"
                     style={{ backgroundColor: "#ffffff", border: "1px solid #dddbd4" }}
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <span className="text-xs uppercase tracking-widest font-medium" style={{ color: "#6b7c6e" }}>
-                        Plot {String(index + 1).padStart(2, "0")}
+                    {/* Card top row */}
+                    <div className="flex items-center justify-between mb-4">
+                      <span
+                        className="text-xs font-semibold"
+                        style={{ color: "#6b7c6e", letterSpacing: "0.1em" }}
+                      >
+                        PLOT {String(i + 1).padStart(2, "0")}
                       </span>
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ border: "1px solid #dddbd4" }}>
-                        <ChevronRight className="w-3.5 h-3.5" style={{ color: "#6b7c6e" }} />
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                        style={{ border: "1px solid #dddbd4" }}
+                      >
+                        <ChevronRight size={14} style={{ color: "#6b7c6e" }} />
                       </div>
                     </div>
-                    <div className="flex items-end gap-3">
-                      <div className="w-10 h-10 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "rgba(30,74,40,0.08)" }}>
-                        <Home className="w-5 h-5" style={{ color: "#1e4a28" }} />
+
+                    {/* Icon + name */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div
+                        className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: "rgba(30,74,40,0.09)" }}
+                      >
+                        <Home size={20} style={{ color: "#1e4a28" }} />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-bold text-lg leading-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1a2a1e" }}>
+                        <h3
+                          className="font-bold text-lg leading-tight truncate"
+                          style={{
+                            color: "#1a2a1e",
+                            fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)",
+                          }}
+                        >
                           {house.name}
                         </h3>
                         {house.description && (
-                          <p className="text-xs mt-0.5 truncate" style={{ color: "#6b7c6e" }}>{house.description}</p>
+                          <p className="text-xs truncate mt-0.5" style={{ color: "#6b7c6e" }}>
+                            {house.description}
+                          </p>
                         )}
                       </div>
                     </div>
-                    <div className="mt-4 pt-3 flex items-center gap-1.5" style={{ borderTop: "1px solid #dddbd4" }}>
-                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: SUCCESS }} />
+
+                    {/* Footer */}
+                    <div
+                      className="flex items-center gap-2 pt-3"
+                      style={{ borderTop: "1px solid #f0ede6" }}
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#236b30" }} />
                       <span className="text-xs" style={{ color: "#6b7c6e" }}>
                         {house.path.length} waypoints &mdash; route ready
                       </span>
@@ -226,90 +253,108 @@ export default function ClientPage() {
                 ))}
               </div>
             )}
-          </div>
+          </section>
 
-          <footer className="py-4 text-center" style={{ borderTop: "1px solid #dddbd4" }}>
-            <p className="text-xs uppercase tracking-widest" style={{ color: "#6b7c6e" }}>
-              {propertyName} &mdash; GPS Guided Routes
+          <footer className="py-5 text-center" style={{ borderTop: "1px solid #dddbd4" }}>
+            <p className="text-xs" style={{ color: "#6b7c6e", letterSpacing: "0.1em" }}>
+              {propertyName.toUpperCase()} &nbsp;&mdash;&nbsp; GPS GUIDED ROUTES
             </p>
           </footer>
         </main>
       )}
 
-      {/* NAVIGATION SCREEN */}
+      {/* ── NAVIGATION SCREEN ── */}
       {screen === "navigate" && selectedHouse && (
         <div className="flex-1 flex flex-col">
 
-          {/* GPS bar */}
-          <div className="px-5 py-3" style={{ backgroundColor: "#ffffff", borderBottom: "1px solid #dddbd4" }}>
-            <div className="max-w-5xl mx-auto flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2.5">
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{
-                  backgroundColor: gpsReady ? SUCCESS : gpsLoading ? "#c47c2a" : "#9ca3af",
-                  animation: (gpsReady || gpsLoading) ? "pulse 2s infinite" : "none"
-                }} />
-                <span className="text-sm font-medium" style={{ color: "#1a2a1e" }}>
-                  {gpsReady ? "Live GPS — map is following you" : gpsLoading ? "Acquiring GPS signal..." : "GPS inactive"}
+          {/* GPS status bar */}
+          <div className="px-4 py-2.5" style={{ backgroundColor: "#fff", borderBottom: "1px solid #dddbd4" }}>
+            <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{
+                    backgroundColor: gpsReady ? "#236b30" : gpsLoading ? "#c47c2a" : "#9ca3af",
+                  }}
+                />
+                <span className="text-sm" style={{ color: "#1a2a1e" }}>
+                  {gpsReady
+                    ? "Live GPS — map is following you"
+                    : gpsLoading
+                    ? "Acquiring GPS signal…"
+                    : "GPS not active"}
                 </span>
               </div>
               {!gpsReady && !gpsLoading && (
                 <button
                   onClick={startGPS}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium"
                   style={{ backgroundColor: "#1e4a28", color: "#f7f5f0" }}
                 >
-                  <Locate className="w-3 h-3" />
+                  <Locate size={12} />
                   Enable GPS
                 </button>
               )}
             </div>
           </div>
 
-          {gpsError && (
-            <div className="mx-5 mt-3 max-w-5xl">
-              <div className="flex items-start gap-2.5 p-3 rounded" style={{ backgroundColor: "rgba(176,58,46,0.08)", border: "1px solid rgba(176,58,46,0.2)" }}>
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: DESTRUCTIVE }} />
-                <p className="text-sm leading-relaxed" style={{ color: DESTRUCTIVE }}>{gpsError}</p>
+          {/* Alerts */}
+          <div className="max-w-5xl w-full mx-auto px-4 space-y-2 pt-3">
+            {gpsError && (
+              <div
+                className="flex items-start gap-2.5 p-3 rounded-md"
+                style={{ backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}
+              >
+                <AlertCircle size={16} style={{ color: "#b03a2e", flexShrink: 0, marginTop: 1 }} />
+                <p className="text-sm leading-relaxed" style={{ color: "#b03a2e" }}>{gpsError}</p>
               </div>
-            </div>
-          )}
-
-          {arrived && (
-            <div className="mx-5 mt-3 max-w-5xl">
-              <div className="flex items-center gap-3 p-4 rounded" style={{ backgroundColor: "rgba(35,107,48,0.08)", border: "1px solid rgba(35,107,48,0.2)" }}>
-                <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: SUCCESS }} />
+            )}
+            {arrived && (
+              <div
+                className="flex items-center gap-3 p-4 rounded-md"
+                style={{ backgroundColor: "rgba(35,107,48,0.07)", border: "1px solid rgba(35,107,48,0.2)" }}
+              >
+                <CheckCircle size={20} style={{ color: "#236b30", flexShrink: 0 }} />
                 <div>
-                  <p className="font-semibold" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#1a2a1e" }}>
-                    You have arrived
+                  <p
+                    className="font-semibold"
+                    style={{ fontFamily: "var(--font-playfair, 'Playfair Display', Georgia, serif)", color: "#1a2a1e" }}
+                  >
+                    You have arrived!
                   </p>
                   <p className="text-sm" style={{ color: "#6b7c6e" }}>
                     Welcome to <strong style={{ color: "#1a2a1e" }}>{selectedHouse.name}</strong>
                   </p>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Route indicator */}
-          <div className="px-5 py-3 max-w-5xl w-full mx-auto">
-            <div className="flex items-center gap-3 text-xs" style={{ color: "#6b7c6e" }}>
+          {/* Route breadcrumb */}
+          <div className="max-w-5xl w-full mx-auto px-4 py-3">
+            <div className="flex items-center gap-2 text-xs" style={{ color: "#6b7c6e" }}>
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full border-2 border-white shadow" style={{ backgroundColor: "#1e4a28" }} />
+                <div className="w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: "#1e4a28" }} />
                 <span>Reception</span>
               </div>
-              <div className="flex-1 border-t border-dashed relative" style={{ borderColor: "#dddbd4" }}>
-                <Navigation className="w-3 h-3 absolute left-1/2 -translate-x-1/2 -top-1.5" style={{ color: AMBER }} />
+              <div className="flex-1 flex items-center gap-1 overflow-hidden">
+                <div className="flex-1 border-t border-dashed" style={{ borderColor: "#dddbd4" }} />
+                <Navigation size={11} style={{ color: "#c47c2a", flexShrink: 0 }} />
+                <div className="flex-1 border-t border-dashed" style={{ borderColor: "#dddbd4" }} />
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded border-2 border-white shadow" style={{ backgroundColor: AMBER }} />
+                <div className="w-2.5 h-2.5 rounded border-2 border-white shadow-sm" style={{ backgroundColor: "#c47c2a" }} />
                 <span className="font-medium" style={{ color: "#1a2a1e" }}>{selectedHouse.name}</span>
               </div>
             </div>
           </div>
 
           {/* Map */}
-          <div className="flex-1 px-5 pb-5">
-            <div className="h-full min-h-[420px] rounded overflow-hidden shadow-sm" style={{ border: "1px solid #dddbd4" }}>
+          <div className="flex-1 px-4 pb-4">
+            <div
+              className="h-full rounded-lg overflow-hidden shadow-sm"
+              style={{ minHeight: 400, border: "1px solid #dddbd4" }}
+            >
               {receptionPoint ? (
                 <ClientMap
                   path={selectedHouse.path}
@@ -318,31 +363,36 @@ export default function ClientPage() {
                   destinationName={selectedHouse.name}
                 />
               ) : (
-                <div className="h-full flex items-center justify-center" style={{ backgroundColor: "#eceae4" }}>
-                  <div className="text-center px-6">
-                    <AlertCircle className="w-8 h-8 mx-auto mb-3" style={{ color: "#6b7c6e" }} />
-                    <p className="text-sm leading-relaxed" style={{ color: "#6b7c6e" }}>
-                      No reception point set. Please contact the property owner.
-                    </p>
-                  </div>
+                <div
+                  className="h-full flex flex-col items-center justify-center text-center px-6"
+                  style={{ backgroundColor: "#eceae4", minHeight: 400 }}
+                >
+                  <Map size={36} style={{ color: "#6b7c6e", marginBottom: 12 }} />
+                  <p className="text-sm" style={{ color: "#6b7c6e" }}>
+                    No reception point set. Contact the property owner.
+                  </p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Tips */}
-          <div className="px-5 pb-6 max-w-5xl w-full mx-auto">
-            <div className="rounded p-4" style={{ backgroundColor: "#ffffff", border: "1px solid #dddbd4" }}>
-              <p className="text-xs uppercase tracking-widest mb-3" style={{ color: "#6b7c6e" }}>How to follow the route</p>
-              <div className="grid sm:grid-cols-2 gap-2">
+          <div className="px-4 pb-6 max-w-5xl w-full mx-auto">
+            <div className="rounded-lg p-4" style={{ backgroundColor: "#fff", border: "1px solid #dddbd4" }}>
+              <p className="text-xs font-semibold mb-3" style={{ color: "#6b7c6e", letterSpacing: "0.1em" }}>
+                HOW TO FOLLOW THE ROUTE
+              </p>
+              <div className="grid sm:grid-cols-2 gap-y-2 gap-x-6">
                 {[
                   "The green line is the recorded road to your destination.",
-                  "Your live position is the blue dot — the map follows you.",
+                  "Your live position shows as a blue dot on the map.",
                   "The green R marker shows the Reception starting point.",
                   "Follow the path until the arrival banner appears.",
                 ].map((tip, i) => (
-                  <div key={i} className="flex items-start gap-2.5">
-                    <span className="text-xs font-bold flex-shrink-0 mt-0.5 w-4" style={{ color: "#1e4a28" }}>{i + 1}.</span>
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-xs font-bold mt-0.5 w-4 flex-shrink-0" style={{ color: "#1e4a28" }}>
+                      {i + 1}.
+                    </span>
                     <p className="text-xs leading-relaxed" style={{ color: "#6b7c6e" }}>{tip}</p>
                   </div>
                 ))}
