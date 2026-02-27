@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import dynamic from "next/dynamic"
 import { isAuthenticated, logout } from "@/lib/auth"
 import {
   fetchHouses, createHouse, removeHouse,
@@ -13,8 +12,7 @@ import {
   MapPin, LogOut, Plus, Trash2, Home, Navigation,
   Settings, CheckCircle, AlertCircle, Edit3, Loader2,
 } from "lucide-react"
-
-const AdminMap = dynamic(() => import("@/components/AdminMap"), { ssr: false })
+import AdminMap from "@/components/AdminMap"
 
 type Tab = "houses" | "reception" | "record"
 
@@ -138,26 +136,39 @@ export default function AdminDashboard() {
     }
   }, [deleteConfirm, refreshHouses])
 
-  const handleSetReception = useCallback(async (latlng: LatLng) => {
-    await updateConfig({ receptionPoint: latlng })
-    const cfg = await fetchConfig()
-    setConfig(cfg)
-  }, [])
+  const handleSetReception = async (latlng: LatLng) => {
+    console.log("[v0] handleSetReception called with:", latlng)
+    try {
+      await updateConfig({ receptionPoint: latlng })
+      console.log("[v0] updateConfig done")
+      const cfg = await fetchConfig()
+      console.log("[v0] fetchConfig result:", cfg)
+      setConfig(cfg)
+    } catch (e) {
+      console.error("[v0] handleSetReception error:", e)
+    }
+  }
 
-  const handleUseMyLocation = useCallback(() => {
+  const handleUseMyLocation = () => {
+    console.log("[v0] handleUseMyLocation called")
     if (!navigator.geolocation) { setReceptionGpsError("GPS not supported on this device."); return }
     setReceptionGpsLoading(true)
     setReceptionGpsError("")
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const latlng: LatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+        console.log("[v0] GPS position obtained:", latlng)
         await handleSetReception(latlng)
         setReceptionGpsLoading(false)
       },
-      (err) => { setReceptionGpsError("Could not get location: " + err.message); setReceptionGpsLoading(false) },
+      (err) => {
+        console.error("[v0] GPS error:", err.message)
+        setReceptionGpsError("Could not get location: " + err.message)
+        setReceptionGpsLoading(false)
+      },
       { enableHighAccuracy: true, timeout: 10000 }
     )
-  }, [handleSetReception])
+  }
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "11px 14px", borderRadius: 8,
