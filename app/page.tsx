@@ -12,7 +12,6 @@ import {
   AlertCircle,
   Locate,
   ChevronRight,
-  Map,
 } from "lucide-react"
 
 const ClientMap = dynamic(() => import("@/components/ClientMap"), { ssr: false })
@@ -28,13 +27,20 @@ export default function ClientPage() {
   const [gpsReady, setGpsReady] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [arrived, setArrived] = useState(false)
-  const [propertyName, setPropertyName] = useState("My Property")
+  const [propertyName, setPropertyName] = useState("The Estate")
+  const [receptionPoint, setReceptionPoint] = useState<LatLng | null>(null)
   const watchIdRef = useRef<number | null>(null)
 
   useEffect(() => {
     setHouses(getHouses())
-    setPropertyName(getConfig().propertyName || "My Property")
+    const cfg = getConfig()
+    setPropertyName(cfg.propertyName || "The Estate")
+    setReceptionPoint(cfg.receptionPoint)
   }, [])
+
+  useEffect(() => {
+    setReceptionPoint(getConfig().receptionPoint)
+  }, [screen])
 
   const startGPS = useCallback(() => {
     if (!navigator.geolocation) {
@@ -43,7 +49,6 @@ export default function ClientPage() {
     }
     setGpsLoading(true)
     setGpsError("")
-
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const point: LatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude }
@@ -52,7 +57,7 @@ export default function ClientPage() {
         setGpsLoading(false)
       },
       (err) => {
-        setGpsError("GPS error: " + err.message + ". Please allow location access.")
+        setGpsError("Location error: " + err.message + ". Please allow access.")
         setGpsLoading(false)
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -68,7 +73,6 @@ export default function ClientPage() {
     setCurrentPosition(null)
   }, [])
 
-  // Check arrival — within ~50m of destination
   useEffect(() => {
     if (!currentPosition || !selectedHouse || arrived) return
     const dest = selectedHouse.path[selectedHouse.path.length - 1]
@@ -76,7 +80,9 @@ export default function ClientPage() {
     const dist = Math.sqrt(
       Math.pow((currentPosition.lat - dest.lat) * 111320, 2) +
         Math.pow(
-          (currentPosition.lng - dest.lng) * 111320 * Math.cos((currentPosition.lat * Math.PI) / 180),
+          (currentPosition.lng - dest.lng) *
+            111320 *
+            Math.cos((currentPosition.lat * Math.PI) / 180),
           2
         )
     )
@@ -90,12 +96,6 @@ export default function ClientPage() {
     startGPS()
   }
 
-  const [receptionPoint, setReceptionPoint] = useState<LatLng | null>(null)
-
-  useEffect(() => {
-    setReceptionPoint(getConfig().receptionPoint)
-  }, [screen])
-
   const handleBack = () => {
     stopGPS()
     setScreen("select")
@@ -106,186 +106,220 @@ export default function ClientPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="bg-nav-bg text-nav-text shadow-lg sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
+
+      {/* ── NAV BAR ── */}
+      <header className="bg-hero-bg text-nav-text sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-5 py-4 flex items-center gap-4">
           {screen === "navigate" && (
             <button
               onClick={handleBack}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors mr-1"
+              className="p-2 rounded-md bg-white/10 hover:bg-white/20 transition-colors"
+              aria-label="Back"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}
-          <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
-            <MapPin className="w-5 h-5 text-accent-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-base leading-tight truncate">{propertyName}</h1>
-            <p className="text-xs opacity-60">
-              {screen === "navigate" && selectedHouse
-                ? `Navigating to ${selectedHouse.name}`
-                : "Choose your destination"}
-            </p>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-8 h-8 rounded-sm bg-accent flex items-center justify-center flex-shrink-0">
+              <MapPin className="w-4 h-4 text-accent-foreground" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-serif text-base font-semibold leading-tight truncate tracking-wide">
+                {propertyName}
+              </p>
+              <p className="text-[11px] uppercase tracking-widest opacity-50 leading-tight">
+                {screen === "navigate" && selectedHouse
+                  ? selectedHouse.name
+                  : "Guest Navigation"}
+              </p>
+            </div>
           </div>
           <a
             href="/admin"
-            className="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+            className="text-[11px] uppercase tracking-widest px-3 py-1.5 border border-white/20 rounded-sm hover:bg-white/10 transition-colors"
           >
             Admin
           </a>
         </div>
       </header>
 
-      {/* HOUSE SELECTION SCREEN */}
+      {/* ── HOUSE SELECTION ── */}
       {screen === "select" && (
-        <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6">
-          <div className="mb-6 text-center">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-3">
-              <Map className="w-7 h-7 text-primary" />
+        <main className="flex-1 flex flex-col">
+
+          {/* Hero banner */}
+          <div className="bg-hero-bg text-nav-text pb-10 pt-6 px-5">
+            <div className="max-w-5xl mx-auto">
+              <p className="text-[11px] uppercase tracking-widest opacity-50 mb-2">
+                Welcome to {propertyName}
+              </p>
+              <h1 className="font-serif text-4xl md:text-5xl font-bold leading-tight text-balance">
+                Where would you<br />like to go?
+              </h1>
+              <p className="mt-3 text-sm opacity-60 leading-relaxed max-w-sm">
+                Select your destination below and we will guide you along the recorded route.
+              </p>
             </div>
-            <h2 className="text-2xl font-bold text-foreground">Where are you going?</h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Select a house below and we will guide you there
-            </p>
           </div>
 
-          {houses.length === 0 ? (
-            <div className="text-center py-16 bg-card rounded-2xl border border-border">
-              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
-                <Home className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold text-foreground">No houses configured yet</h3>
-              <p className="text-muted-foreground text-sm mt-1 max-w-xs mx-auto">
-                The property owner needs to add house paths via the admin panel first.
-              </p>
-              <a
-                href="/admin"
-                className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all"
-              >
-                Go to Admin
-              </a>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {houses.map((house) => (
-                <button
-                  key={house.id}
-                  onClick={() => handleSelectHouse(house)}
-                  className="group text-left bg-card hover:bg-primary/5 border border-border hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+          {/* Wave divider */}
+          <div className="bg-hero-bg">
+            <svg viewBox="0 0 1440 40" className="w-full block" preserveAspectRatio="none" style={{ height: 40 }}>
+              <path d="M0,40 C360,0 1080,0 1440,40 L1440,40 L0,40 Z" fill="var(--background)" />
+            </svg>
+          </div>
+
+          {/* House cards */}
+          <div className="flex-1 max-w-5xl w-full mx-auto px-5 py-8">
+            {houses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-16 h-16 rounded-full border-2 border-border flex items-center justify-center mb-5">
+                  <Home className="w-7 h-7 text-muted-foreground" />
+                </div>
+                <h3 className="font-serif text-xl font-semibold text-foreground">No destinations yet</h3>
+                <p className="text-muted-foreground text-sm mt-2 max-w-xs leading-relaxed">
+                  The property owner needs to record paths via the admin panel first.
+                </p>
+                <a
+                  href="/admin"
+                  className="mt-6 px-5 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-sm hover:opacity-90 transition-all"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center flex-shrink-0 transition-colors">
-                      <Home className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-card-foreground text-lg leading-tight">
-                        {house.name}
-                      </h3>
-                      {house.description && (
-                        <p className="text-sm text-muted-foreground mt-0.5 truncate">
-                          {house.description}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {house.path.length} waypoints recorded
-                      </p>
-                    </div>
-                    <div className="flex-shrink-0">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
-                        <ChevronRight className="w-4 h-4 text-primary" />
+                  Open Admin Panel
+                </a>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {houses.map((house, index) => (
+                  <button
+                    key={house.id}
+                    onClick={() => handleSelectHouse(house)}
+                    className="group text-left bg-card border border-border hover:border-primary/40 hover:shadow-lg rounded-sm p-5 transition-all duration-200 active:scale-[0.98]"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <span className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
+                        Plot {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <div className="w-7 h-7 rounded-full border border-border group-hover:border-primary group-hover:bg-primary/5 flex items-center justify-center transition-colors">
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
                     </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+                    <div className="flex items-end gap-3">
+                      <div className="w-10 h-10 bg-primary/8 rounded-sm flex items-center justify-center flex-shrink-0">
+                        <Home className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-serif font-semibold text-lg text-card-foreground leading-tight text-balance">
+                          {house.name}
+                        </h3>
+                        {house.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                            {house.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-border flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                      <span className="text-[11px] text-muted-foreground">
+                        {house.path.length} waypoints &mdash; route ready
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <footer className="border-t border-border py-4 text-center">
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+              {propertyName} &mdash; GPS Guided Routes
+            </p>
+          </footer>
         </main>
       )}
 
-      {/* NAVIGATION SCREEN */}
+      {/* ── NAVIGATION SCREEN ── */}
       {screen === "navigate" && selectedHouse && (
         <div className="flex-1 flex flex-col">
-          {/* Status bar */}
-          <div className="bg-card border-b border-border px-4 py-3">
-            <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${gpsReady ? "bg-success animate-pulse" : gpsLoading ? "bg-warning animate-pulse" : "bg-muted-foreground"}`} />
-                <span className="text-sm font-medium text-foreground">
-                  {gpsReady ? "GPS Active — Map following you" : gpsLoading ? "Getting GPS fix..." : "GPS inactive"}
+
+          {/* GPS status bar */}
+          <div className="bg-card border-b border-border px-5 py-3">
+            <div className="max-w-5xl mx-auto flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    gpsReady
+                      ? "bg-success animate-pulse"
+                      : gpsLoading
+                      ? "bg-warning animate-pulse"
+                      : "bg-muted-foreground"
+                  }`}
+                />
+                <span className="text-sm text-foreground font-medium">
+                  {gpsReady
+                    ? "Live GPS — map is following you"
+                    : gpsLoading
+                    ? "Acquiring GPS signal..."
+                    : "GPS inactive"}
                 </span>
               </div>
-
-              <div className="flex items-center gap-2">
-                {!gpsReady && !gpsLoading && (
-                  <button
-                    onClick={startGPS}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-all"
-                  >
-                    <Locate className="w-3 h-3" />
-                    Enable GPS
-                  </button>
-                )}
-                {currentPosition && (
-                  <span className="text-xs font-mono text-muted-foreground hidden sm:block">
-                    {currentPosition.lat.toFixed(5)}, {currentPosition.lng.toFixed(5)}
-                  </span>
-                )}
-              </div>
+              {!gpsReady && !gpsLoading && (
+                <button
+                  onClick={startGPS}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-sm hover:opacity-90 transition-all"
+                >
+                  <Locate className="w-3 h-3" />
+                  Enable GPS
+                </button>
+              )}
             </div>
           </div>
 
-          {/* GPS Error */}
+          {/* Error notice */}
           {gpsError && (
-            <div className="mx-4 mt-3 max-w-4xl mx-auto">
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20">
+            <div className="mx-5 mt-3 max-w-5xl">
+              <div className="flex items-start gap-2.5 p-3 bg-destructive/8 border border-destructive/20 rounded-sm">
                 <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-destructive">GPS Error</p>
-                  <p className="text-xs text-destructive/80 mt-0.5">{gpsError}</p>
-                </div>
+                <p className="text-sm text-destructive leading-relaxed">{gpsError}</p>
               </div>
             </div>
           )}
 
           {/* Arrived banner */}
           {arrived && (
-            <div className="mx-4 mt-3">
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-success/10 border border-success/30 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-success flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-5 h-5 text-success-foreground" />
-                </div>
+            <div className="mx-5 mt-3 max-w-5xl">
+              <div className="flex items-center gap-3 p-4 bg-success/8 border border-success/25 rounded-sm">
+                <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
                 <div>
-                  <p className="font-semibold text-foreground">You have arrived!</p>
+                  <p className="font-serif font-semibold text-foreground">You have arrived</p>
                   <p className="text-sm text-muted-foreground">
-                    Welcome to <strong>{selectedHouse.name}</strong>
+                    Welcome to <strong className="text-foreground">{selectedHouse.name}</strong>
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Route info strip */}
-          <div className="px-4 py-2 max-w-4xl w-full mx-auto">
-            <div className="flex items-center gap-4 text-sm">
+          {/* Route strip */}
+          <div className="px-5 py-3 max-w-5xl w-full mx-auto">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-primary border-2 border-white shadow" />
-                <span className="text-muted-foreground text-xs">Reception</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-white shadow-sm" />
+                <span>Reception</span>
               </div>
-              <div className="flex-1 h-px bg-border relative">
+              <div className="flex-1 border-t border-dashed border-border relative">
                 <Navigation className="w-3 h-3 text-accent absolute left-1/2 -translate-x-1/2 -top-1.5" />
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-accent border-2 border-white shadow" />
-                <span className="text-muted-foreground text-xs font-medium">{selectedHouse.name}</span>
+                <div className="w-2.5 h-2.5 rounded-sm bg-accent border-2 border-white shadow-sm" />
+                <span className="font-medium text-foreground">{selectedHouse.name}</span>
               </div>
             </div>
           </div>
 
           {/* Map */}
-          <div className="flex-1 px-4 pb-4">
-            <div className="h-full min-h-[450px] rounded-2xl border border-border overflow-hidden shadow-sm">
+          <div className="flex-1 px-5 pb-5">
+            <div className="h-full min-h-[420px] rounded-sm border border-border overflow-hidden shadow-sm">
               {receptionPoint ? (
                 <ClientMap
                   path={selectedHouse.path}
@@ -294,11 +328,11 @@ export default function ClientPage() {
                   destinationName={selectedHouse.name}
                 />
               ) : (
-                <div className="h-full flex items-center justify-center bg-muted/30">
-                  <div className="text-center">
-                    <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No reception point configured. Contact the property owner.
+                <div className="h-full flex items-center justify-center bg-muted/20">
+                  <div className="text-center px-6">
+                    <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      No reception point has been set. Please contact the property owner.
                     </p>
                   </div>
                 </div>
@@ -306,35 +340,30 @@ export default function ClientPage() {
             </div>
           </div>
 
-          {/* Instructions panel */}
-          <div className="px-4 pb-6 max-w-4xl w-full mx-auto">
-            <div className="bg-card rounded-2xl border border-border p-4">
-              <h3 className="font-semibold text-foreground mb-2 text-sm">How to navigate</h3>
-              <ul className="space-y-1.5">
+          {/* How-to strip */}
+          <div className="px-5 pb-6 max-w-5xl w-full mx-auto">
+            <div className="bg-card border border-border rounded-sm p-4">
+              <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3">
+                How to follow the route
+              </p>
+              <div className="grid sm:grid-cols-2 gap-2">
                 {[
-                  "The green line on the map shows the road to your destination.",
-                  "The blue dot is your current position — the map follows you as you drive.",
-                  "The green R marker is Reception where the route starts.",
-                  "Follow the green path until you reach your destination.",
+                  "The green line is the recorded road to your destination.",
+                  "Your live position is the blue dot — the map follows you.",
+                  "The green R marker shows the Reception starting point.",
+                  "Follow the path until the arrival banner appears.",
                 ].map((tip, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-[9px] font-bold text-primary">{i + 1}</span>
-                    </div>
+                  <div key={i} className="flex items-start gap-2.5">
+                    <span className="text-[11px] font-bold text-primary flex-shrink-0 mt-0.5 w-4">
+                      {i + 1}.
+                    </span>
                     <p className="text-xs text-muted-foreground leading-relaxed">{tip}</p>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Footer on select screen */}
-      {screen === "select" && (
-        <footer className="text-center py-4 text-xs text-muted-foreground border-t border-border">
-          Property Navigator — GPS guided routes
-        </footer>
       )}
     </div>
   )
