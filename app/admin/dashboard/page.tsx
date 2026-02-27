@@ -16,12 +16,20 @@ const AdminMap = dynamic(() => import("@/components/AdminMap"), { ssr: false })
 
 type Tab = "houses" | "reception" | "record"
 
-const SERIF = "var(--font-playfair, 'Playfair Display', Georgia, serif)"
+const SERIF = "'Playfair Display', Georgia, serif"
+const SANS = "'Inter', system-ui, sans-serif"
 const DARK_GREEN = "#122918"
 const AMBER = "#c47c2a"
 const PRIMARY = "#1e4a28"
 const SUCCESS = "#236b30"
 const DESTRUCTIVE = "#b03a2e"
+
+const btn = (bg: string, color = "#fff", extra?: React.CSSProperties): React.CSSProperties => ({
+  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+  padding: "9px 16px", borderRadius: 7, fontSize: 12, fontWeight: 700,
+  fontFamily: SANS, letterSpacing: "0.06em", border: "none", cursor: "pointer",
+  backgroundColor: bg, color, ...extra,
+})
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -107,194 +115,137 @@ export default function AdminDashboard() {
 
   if (!config) return null
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "houses", label: "Houses", icon: <Home size={15} /> },
-    { id: "reception", label: "Reception", icon: <Settings size={15} /> },
-    { id: "record", label: "Record Path", icon: <Navigation size={15} /> },
-  ]
-
-  const inputClass = "w-full px-4 py-2.5 rounded-md text-sm outline-none transition-shadow"
   const inputStyle: React.CSSProperties = {
-    border: "1px solid #dddbd4",
-    backgroundColor: "#f7f5f0",
-    color: "#1a2a1e",
+    width: "100%", padding: "11px 14px", borderRadius: 8,
+    border: "1.5px solid #dddbd4", backgroundColor: "#f7f5f0",
+    fontSize: 13, color: "#1a2a1e", fontFamily: SANS,
+    outline: "none", boxSizing: "border-box",
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#f7f5f0" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#f7f5f0", fontFamily: SANS }}>
 
-      {/* ── HEADER ── */}
-      <header className="sticky top-0 z-50 shadow-sm" style={{ backgroundColor: DARK_GREEN }}>
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="w-7 h-7 rounded flex items-center justify-center" style={{ backgroundColor: AMBER }}>
+      {/* HEADER */}
+      <header style={{ backgroundColor: DARK_GREEN, position: "sticky", top: 0, zIndex: 50, boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 16px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 7, backgroundColor: AMBER, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <MapPin size={14} color="#fff" />
             </div>
             <div>
-              <p className="text-sm font-semibold leading-none" style={{ color: "#f0ede6", fontFamily: SERIF }}>
-                Property Navigator
-              </p>
-              <p className="text-xs leading-none mt-0.5" style={{ color: "rgba(240,237,230,0.4)", letterSpacing: "0.12em" }}>
-                ADMIN
-              </p>
+              <p style={{ fontFamily: SERIF, fontSize: 14, fontWeight: 700, color: "#f0ede6", lineHeight: 1 }}>Property Navigator</p>
+              <p style={{ fontSize: 10, color: "rgba(240,237,230,0.4)", letterSpacing: "0.14em", marginTop: 3, lineHeight: 1 }}>ADMIN</p>
             </div>
           </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <a
-              href="/"
-              className="hidden sm:block text-xs transition-opacity"
-              style={{ color: "rgba(240,237,230,0.5)", letterSpacing: "0.1em" }}
-            >
-              GUEST VIEW
-            </a>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <a href="/" style={{ fontSize: 11, color: "rgba(240,237,230,0.5)", letterSpacing: "0.1em", textDecoration: "none" }}>GUEST VIEW</a>
             <button
               onClick={() => { logout(); router.push("/admin") }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors"
-              style={{ border: "1px solid rgba(255,255,255,0.2)", color: "rgba(240,237,230,0.8)", background: "none", cursor: "pointer" }}
+              style={{ ...btn("transparent", "rgba(240,237,230,0.8)", { border: "1px solid rgba(255,255,255,0.2)" }) }}
             >
-              <LogOut size={13} />
-              Sign out
+              <LogOut size={13} /> Sign out
             </button>
           </div>
         </div>
 
-        {/* Tab bar */}
-        <div
-          className="flex max-w-6xl mx-auto px-4"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}
-        >
-          {tabs.map((tab) => (
+        {/* Tabs */}
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", maxWidth: 1100, margin: "0 auto", padding: "0 16px", display: "flex" }}>
+          {([
+            { id: "houses", label: "Houses", icon: <Home size={14} /> },
+            { id: "reception", label: "Reception", icon: <Settings size={14} /> },
+            { id: "record", label: "Record Path", icon: <Navigation size={14} /> },
+          ] as const).map((tab) => (
             <button
               key={tab.id}
-              onClick={() => { setActiveTab(tab.id as Tab); if (tab.id !== "record" && recording) stopRecording() }}
-              className="flex items-center gap-2 px-4 py-3 text-xs font-semibold transition-colors"
+              onClick={() => { setActiveTab(tab.id); if (tab.id !== "record" && recording) stopRecording() }}
               style={{
-                borderBottom: activeTab === tab.id ? `2px solid ${AMBER}` : "2px solid transparent",
-                color: activeTab === tab.id ? "#ffffff" : "rgba(255,255,255,0.45)",
-                background: "none",
+                display: "flex", alignItems: "center", gap: 7, padding: "12px 16px",
+                fontSize: 11, fontWeight: 700, fontFamily: SANS, letterSpacing: "0.1em",
+                borderBottom: activeTab === tab.id ? `2.5px solid ${AMBER}` : "2.5px solid transparent",
+                color: activeTab === tab.id ? "#fff" : "rgba(255,255,255,0.45)",
+                background: "none", border: "none", borderBottom: activeTab === tab.id ? `2.5px solid ${AMBER}` : "2.5px solid transparent",
                 cursor: "pointer",
-                letterSpacing: "0.08em",
               }}
             >
               {tab.icon}
-              <span className="hidden sm:inline uppercase">{tab.label}</span>
+              <span>{tab.label.toUpperCase()}</span>
             </button>
           ))}
         </div>
       </header>
 
-      {/* ── MAIN CONTENT ── */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
+      {/* CONTENT */}
+      <main style={{ flex: 1, maxWidth: 1100, width: "100%", margin: "0 auto", padding: "32px 16px" }}>
 
-        {/* ── HOUSES TAB ── */}
+        {/* HOUSES TAB */}
         {activeTab === "houses" && (
-          <div className="space-y-6">
-            <div className="flex items-end justify-between">
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
               <div>
-                <p className="text-xs font-semibold mb-1" style={{ color: "#6b7c6e", letterSpacing: "0.12em" }}>
-                  SAVED DESTINATIONS
-                </p>
-                <h2 className="text-2xl font-bold" style={{ color: "#1a2a1e", fontFamily: SERIF }}>
-                  Houses
-                </h2>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.12em", marginBottom: 6 }}>SAVED DESTINATIONS</p>
+                <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#1a2a1e", lineHeight: 1.1 }}>Houses</h2>
               </div>
-              <button
-                onClick={() => setActiveTab("record")}
-                className="flex items-center gap-2 px-4 py-2 rounded text-xs font-semibold transition-all"
-                style={{ backgroundColor: PRIMARY, color: "#f7f5f0", border: "none", cursor: "pointer", letterSpacing: "0.08em" }}
-              >
-                <Plus size={14} />
-                ADD HOUSE
+              <button onClick={() => setActiveTab("record")} style={btn(PRIMARY)}>
+                <Plus size={14} /> ADD HOUSE
               </button>
             </div>
 
             {houses.length === 0 ? (
-              <div
-                className="flex flex-col items-center py-20 text-center rounded-lg"
-                style={{ backgroundColor: "#fff", border: "1px solid #dddbd4" }}
-              >
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
-                  style={{ border: "2px solid #dddbd4" }}
-                >
-                  <Home size={24} style={{ color: "#6b7c6e" }} />
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 24px", textAlign: "center", backgroundColor: "#fff", border: "1px solid #dddbd4", borderRadius: 10 }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", border: "2px solid #dddbd4", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                  <Home size={24} color="#6b7c6e" />
                 </div>
-                <h3 className="text-lg font-bold mb-2" style={{ fontFamily: SERIF, color: "#1a2a1e" }}>
-                  No houses recorded yet
-                </h3>
-                <p className="text-sm max-w-xs leading-relaxed" style={{ color: "#6b7c6e" }}>
+                <h3 style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: "#1a2a1e", marginBottom: 8 }}>No houses recorded yet</h3>
+                <p style={{ fontSize: 13, color: "#6b7c6e", maxWidth: 280, lineHeight: 1.6 }}>
                   Go to the Record Path tab and drive from reception to each house to save a route.
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
                 {houses.map((house, index) => (
-                  <div
-                    key={house.id}
-                    className="rounded-lg p-5 transition-shadow hover:shadow-md"
-                    style={{ backgroundColor: "#fff", border: "1px solid #dddbd4" }}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <span className="text-xs font-semibold" style={{ color: "#6b7c6e", letterSpacing: "0.1em" }}>
+                  <div key={house.id} style={{ borderRadius: 10, padding: 20, backgroundColor: "#fff", border: "1px solid #dddbd4", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.12em" }}>
                         PLOT {String(index + 1).padStart(2, "0")}
                       </span>
                       <button
                         onClick={() => handleDeleteHouse(house.id)}
-                        className="w-7 h-7 rounded flex items-center justify-center transition-all"
+                        title={deleteConfirm === house.id ? "Click again to confirm" : "Delete"}
                         style={{
+                          width: 28, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
                           backgroundColor: deleteConfirm === house.id ? DESTRUCTIVE : "transparent",
                           color: deleteConfirm === house.id ? "#fff" : "#9ca3af",
                           border: `1px solid ${deleteConfirm === house.id ? DESTRUCTIVE : "#dddbd4"}`,
                           cursor: "pointer",
                         }}
-                        title={deleteConfirm === house.id ? "Click again to confirm delete" : "Delete"}
                       >
                         <Trash2 size={13} />
                       </button>
                     </div>
-
-                    <div className="flex items-center gap-3 mb-4">
-                      <div
-                        className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: "rgba(30,74,40,0.09)" }}
-                      >
-                        <Home size={20} style={{ color: PRIMARY }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: "rgba(30,74,40,0.09)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Home size={20} color={PRIMARY} />
                       </div>
-                      <div className="min-w-0">
-                        <h3
-                          className="font-bold text-base leading-tight truncate"
-                          style={{ color: "#1a2a1e", fontFamily: SERIF }}
-                        >
+                      <div style={{ minWidth: 0 }}>
+                        <h3 style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 700, color: "#1a2a1e", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {house.name}
                         </h3>
                         {house.description && (
-                          <p className="text-xs truncate mt-0.5" style={{ color: "#6b7c6e" }}>
-                            {house.description}
-                          </p>
+                          <p style={{ fontSize: 12, color: "#6b7c6e", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{house.description}</p>
                         )}
                       </div>
                     </div>
-
-                    <div
-                      className="flex items-center justify-between pt-3"
-                      style={{ borderTop: "1px solid #f0ede6" }}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: SUCCESS }} />
-                        <span className="text-xs" style={{ color: "#6b7c6e" }}>{house.path.length} GPS points</span>
+                    <div style={{ paddingTop: 12, borderTop: "1px solid #f0ede6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: SUCCESS }} />
+                        <span style={{ fontSize: 11, color: "#6b7c6e" }}>{house.path.length} GPS points</span>
                       </div>
-                      <span className="text-xs" style={{ color: "#9ca3af" }}>
+                      <span style={{ fontSize: 11, color: "#9ca3af" }}>
                         {new Date(house.createdAt).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}
                       </span>
                     </div>
-
                     {deleteConfirm === house.id && (
-                      <p className="text-xs text-center font-medium mt-2.5" style={{ color: DESTRUCTIVE }}>
-                        Tap delete again to confirm
-                      </p>
+                      <p style={{ fontSize: 11, textAlign: "center", color: DESTRUCTIVE, fontWeight: 600, marginTop: 10 }}>Tap delete again to confirm</p>
                     )}
                   </div>
                 ))}
@@ -303,66 +254,44 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ── RECEPTION TAB ── */}
+        {/* RECEPTION TAB */}
         {activeTab === "reception" && (
-          <div className="space-y-6">
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <div>
-              <p className="text-xs font-semibold mb-1" style={{ color: "#6b7c6e", letterSpacing: "0.12em" }}>
-                CONFIGURATION
-              </p>
-              <h2 className="text-2xl font-bold" style={{ color: "#1a2a1e", fontFamily: SERIF }}>
-                Reception Point
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "#6b7c6e" }}>
-                All navigation routes start from this location.
-              </p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.12em", marginBottom: 6 }}>CONFIGURATION</p>
+              <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#1a2a1e", lineHeight: 1.1 }}>Reception Point</h2>
+              <p style={{ fontSize: 13, color: "#6b7c6e", marginTop: 6 }}>All navigation routes start from this location.</p>
             </div>
 
             {config.receptionPoint ? (
-              <div
-                className="flex items-center gap-3 p-4 rounded-md"
-                style={{ backgroundColor: "rgba(35,107,48,0.07)", border: "1px solid rgba(35,107,48,0.22)" }}
-              >
-                <CheckCircle size={17} style={{ color: SUCCESS, flexShrink: 0 }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold" style={{ color: "#1a2a1e" }}>Reception point is set</p>
-                  <p className="text-xs mt-0.5 truncate" style={{ color: "#6b7c6e", fontFamily: "monospace" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 8, backgroundColor: "rgba(35,107,48,0.07)", border: "1px solid rgba(35,107,48,0.22)", flexWrap: "wrap" }}>
+                <CheckCircle size={17} color={SUCCESS} style={{ flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>Reception point is set</p>
+                  <p style={{ fontSize: 11, color: "#6b7c6e", fontFamily: "monospace", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {config.receptionPoint.lat.toFixed(6)}, {config.receptionPoint.lng.toFixed(6)}
                   </p>
                 </div>
-                <button
-                  onClick={() => setSettingReception(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-all flex-shrink-0"
-                  style={{ backgroundColor: PRIMARY, color: "#f7f5f0", border: "none", cursor: "pointer" }}
-                >
-                  <Edit3 size={12} />
-                  Change
+                <button onClick={() => setSettingReception(true)} style={btn(PRIMARY, "#fff", { flexShrink: 0 })}>
+                  <Edit3 size={12} /> Change
                 </button>
               </div>
             ) : (
-              <div
-                className="flex items-center gap-3 p-4 rounded-md"
-                style={{ backgroundColor: "#eceae4", border: "1px solid #dddbd4" }}
-              >
-                <AlertCircle size={17} style={{ color: AMBER, flexShrink: 0 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 8, backgroundColor: "#eceae4", border: "1px solid #dddbd4" }}>
+                <AlertCircle size={17} color={AMBER} style={{ flexShrink: 0 }} />
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: "#1a2a1e" }}>No reception point set</p>
-                  <p className="text-xs mt-0.5" style={{ color: "#6b7c6e" }}>Tap the map below to place your reception marker.</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>No reception point set</p>
+                  <p style={{ fontSize: 12, color: "#6b7c6e", marginTop: 2 }}>Tap the map below to place your reception marker.</p>
                 </div>
               </div>
             )}
 
-            <div className="rounded-lg overflow-hidden" style={{ backgroundColor: "#fff", border: "1px solid #dddbd4" }}>
-              <div
-                className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap"
-                style={{ borderBottom: "1px solid #dddbd4" }}
-              >
-                <p className="text-sm font-medium" style={{ color: "#1a2a1e" }}>
-                  {settingReception || !config.receptionPoint
-                    ? "Tap the map to place the reception marker"
-                    : "Current reception location"}
+            <div style={{ borderRadius: 10, overflow: "hidden", backgroundColor: "#fff", border: "1px solid #dddbd4" }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid #dddbd4", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: "#1a2a1e" }}>
+                  {settingReception || !config.receptionPoint ? "Tap the map to place the reception marker" : "Current reception location"}
                 </p>
-                <div className="flex items-center gap-2">
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {(settingReception || !config.receptionPoint) && (
                     <button
                       onClick={() => {
@@ -372,20 +301,16 @@ export default function AdminDashboard() {
                           () => setGpsError("Could not get your GPS position")
                         )
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold"
-                      style={{ backgroundColor: AMBER, color: "#fff", border: "none", cursor: "pointer" }}
+                      style={btn(AMBER)}
                     >
-                      <Navigation size={12} />
-                      Use My Location
+                      <Navigation size={12} /> Use My Location
                     </button>
                   )}
                   <button
                     onClick={() => setSettingReception((v) => !v)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold"
-                    style={{ backgroundColor: "#eceae4", color: "#1a2a1e", border: "1px solid #dddbd4", cursor: "pointer" }}
+                    style={btn("#eceae4", "#1a2a1e", { border: "1px solid #dddbd4" })}
                   >
-                    <MapPin size={12} />
-                    {settingReception ? "Cancel" : "Set on Map"}
+                    <MapPin size={12} /> {settingReception ? "Cancel" : "Set on Map"}
                   </button>
                 </div>
               </div>
@@ -398,195 +323,160 @@ export default function AdminDashboard() {
                 />
               </div>
             </div>
-
-            {gpsError && (
-              <p className="text-sm" style={{ color: DESTRUCTIVE }}>{gpsError}</p>
-            )}
+            {gpsError && <p style={{ fontSize: 13, color: DESTRUCTIVE }}>{gpsError}</p>}
           </div>
         )}
 
-        {/* ── RECORD PATH TAB ── */}
+        {/* RECORD PATH TAB */}
         {activeTab === "record" && (
-          <div className="space-y-6">
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <div>
-              <p className="text-xs font-semibold mb-1" style={{ color: "#6b7c6e", letterSpacing: "0.12em" }}>
-                PATH RECORDING
-              </p>
-              <h2 className="text-2xl font-bold" style={{ color: "#1a2a1e", fontFamily: SERIF }}>
-                Record a Route
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "#6b7c6e" }}>
-                Enter the house name, then drive from reception to the house while recording.
-              </p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.12em", marginBottom: 6 }}>PATH RECORDING</p>
+              <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 800, color: "#1a2a1e", lineHeight: 1.1 }}>Record a Route</h2>
+              <p style={{ fontSize: 13, color: "#6b7c6e", marginTop: 6 }}>Enter the house name, then drive from reception to the house while recording.</p>
             </div>
 
             {/* Input fields */}
-            <div className="rounded-lg p-5 space-y-4" style={{ backgroundColor: "#fff", border: "1px solid #dddbd4" }}>
+            <div style={{ borderRadius: 10, padding: 20, backgroundColor: "#fff", border: "1px solid #dddbd4", display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
-                <label
-                  htmlFor="hname"
-                  className="block text-xs font-semibold uppercase mb-2"
-                  style={{ color: "#1a2a1e", letterSpacing: "0.1em" }}
-                >
-                  House Name <span style={{ color: DESTRUCTIVE }}>*</span>
+                <label htmlFor="hname" style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#1a2a1e", letterSpacing: "0.1em", marginBottom: 8 }}>
+                  HOUSE NAME <span style={{ color: DESTRUCTIVE }}>*</span>
                 </label>
                 <input
-                  id="hname"
-                  type="text"
-                  value={houseName}
+                  id="hname" type="text" value={houseName}
                   onChange={(e) => setHouseName(e.target.value)}
                   placeholder="e.g. The Old Oak Cottage"
-                  disabled={recording}
-                  className={inputClass}
-                  style={inputStyle}
-                  onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #1e4a28")}
-                  onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+                  disabled={recording} style={inputStyle}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = PRIMARY)}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "#dddbd4")}
                 />
               </div>
               <div>
-                <label
-                  htmlFor="hdesc"
-                  className="block text-xs font-semibold uppercase mb-2"
-                  style={{ color: "#1a2a1e", letterSpacing: "0.1em" }}
-                >
-                  Description{" "}
-                  <span className="normal-case font-normal text-xs" style={{ color: "#6b7c6e", letterSpacing: "normal" }}>
-                    (optional)
-                  </span>
+                <label htmlFor="hdesc" style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#1a2a1e", letterSpacing: "0.1em", marginBottom: 8 }}>
+                  DESCRIPTION <span style={{ fontSize: 11, fontWeight: 400, color: "#6b7c6e", letterSpacing: "normal", textTransform: "none" }}>(optional)</span>
                 </label>
                 <input
-                  id="hdesc"
-                  type="text"
-                  value={houseDescription}
+                  id="hdesc" type="text" value={houseDescription}
                   onChange={(e) => setHouseDescription(e.target.value)}
                   placeholder="e.g. Blue roof near the dam"
-                  disabled={recording}
-                  className={inputClass}
-                  style={inputStyle}
-                  onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #1e4a28")}
-                  onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+                  disabled={recording} style={inputStyle}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = PRIMARY)}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "#dddbd4")}
                 />
               </div>
             </div>
 
-            {/* Record controls */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            {/* Recording status */}
+            {recording && (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 8, backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: DESTRUCTIVE, flexShrink: 0, animation: "pulse 1.2s infinite" }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>Recording in progress…</p>
+                  <p style={{ fontSize: 12, color: "#6b7c6e", marginTop: 2 }}>
+                    {recordedPath.length} GPS points recorded &mdash; drive slowly towards your destination
+                  </p>
+                </div>
+                {currentPosition && (
+                  <p style={{ fontSize: 11, color: "#6b7c6e", fontFamily: "monospace", flexShrink: 0 }}>
+                    {currentPosition.lat.toFixed(4)}, {currentPosition.lng.toFixed(4)}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
               {!recording ? (
-                <button
-                  onClick={startRecording}
-                  className="flex-1 flex items-center justify-center gap-2.5 py-3 px-6 rounded text-sm font-semibold transition-all"
-                  style={{ backgroundColor: PRIMARY, color: "#f7f5f0", border: "none", cursor: "pointer" }}
-                >
-                  <Circle size={14} color="#f87171" fill="#f87171" />
-                  Start Recording
+                <button onClick={startRecording} style={{ ...btn(PRIMARY), padding: "13px 24px", fontSize: 13, flex: 1, minWidth: 160, justifyContent: "center" }}>
+                  <Circle size={14} color="#f87171" fill="#f87171" /> Start Recording
                 </button>
               ) : (
-                <button
-                  onClick={stopRecording}
-                  className="flex-1 flex items-center justify-center gap-2.5 py-3 px-6 rounded text-sm font-semibold transition-all"
-                  style={{ backgroundColor: DESTRUCTIVE, color: "#fff", border: "none", cursor: "pointer" }}
-                >
-                  <span className="w-3.5 h-3.5 rounded bg-white flex-shrink-0" />
-                  Stop Recording
+                <button onClick={stopRecording} style={{ ...btn(DESTRUCTIVE), padding: "13px 24px", fontSize: 13, flex: 1, minWidth: 160, justifyContent: "center" }}>
+                  <span style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: "#fff", flexShrink: 0 }} /> Stop Recording
                 </button>
               )}
-
               {recordedPath.length >= 2 && !recording && (
                 <button
                   onClick={savePath}
                   disabled={!houseName.trim()}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded text-sm font-semibold transition-all"
-                  style={{
-                    backgroundColor: !houseName.trim() ? "#9ca3af" : AMBER,
-                    color: "#fff",
-                    border: "none",
-                    cursor: !houseName.trim() ? "not-allowed" : "pointer",
-                  }}
+                  style={{ ...btn(!houseName.trim() ? "#9ca3af" : AMBER), padding: "13px 24px", fontSize: 13, flex: 1, minWidth: 160, justifyContent: "center", cursor: !houseName.trim() ? "not-allowed" : "pointer" }}
                 >
-                  <CheckCircle size={16} />
-                  Save House Path
+                  <CheckCircle size={15} /> Save House Path
                 </button>
               )}
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-3">
-              <div
-                className="p-4 rounded-md"
-                style={{
-                  backgroundColor: recording ? "#fef2f2" : "#fff",
-                  border: `1px solid ${recording ? "#fecaca" : "#dddbd4"}`,
-                }}
-              >
-                <p className="text-xs font-semibold mb-1.5" style={{ color: "#6b7c6e", letterSpacing: "0.1em" }}>
-                  STATUS
-                </p>
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: recording ? "#ef4444" : "#9ca3af" }}
-                  />
-                  <span className="font-bold text-base" style={{ color: "#1a2a1e", fontFamily: SERIF }}>
-                    {recording ? "Recording" : "Idle"}
-                  </span>
-                </div>
-              </div>
-              <div className="p-4 rounded-md" style={{ backgroundColor: "#fff", border: "1px solid #dddbd4" }}>
-                <p className="text-xs font-semibold mb-1.5" style={{ color: "#6b7c6e", letterSpacing: "0.1em" }}>
-                  POINTS RECORDED
-                </p>
-                <p className="font-bold text-2xl" style={{ color: "#1a2a1e", fontFamily: SERIF }}>
-                  {recordedPath.length}
-                </p>
-              </div>
-            </div>
-
-            {/* Status alerts */}
+            {/* Status messages */}
             {saveStatus === "success" && (
-              <div
-                className="flex items-center gap-2.5 p-3 rounded-md"
-                style={{ backgroundColor: "rgba(35,107,48,0.07)", border: "1px solid rgba(35,107,48,0.2)" }}
-              >
-                <CheckCircle size={16} style={{ color: SUCCESS }} />
-                <p className="text-sm font-medium" style={{ color: "#1a2a1e" }}>House path saved successfully!</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 8, backgroundColor: "rgba(35,107,48,0.08)", border: "1px solid rgba(35,107,48,0.2)" }}>
+                <CheckCircle size={16} color={SUCCESS} />
+                <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2a1e" }}>House path saved successfully!</p>
               </div>
             )}
             {saveStatus === "error" && (
-              <div
-                className="flex items-center gap-2.5 p-3 rounded-md"
-                style={{ backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}
-              >
-                <AlertCircle size={16} style={{ color: DESTRUCTIVE }} />
-                <p className="text-sm" style={{ color: DESTRUCTIVE }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 8, backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}>
+                <AlertCircle size={16} color={DESTRUCTIVE} />
+                <p style={{ fontSize: 13, color: DESTRUCTIVE }}>
                   {!houseName.trim() ? "Please enter a house name first." : "Record at least 2 GPS points before saving."}
                 </p>
               </div>
             )}
             {gpsError && (
-              <div
-                className="flex items-center gap-2.5 p-3 rounded-md"
-                style={{ backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}
-              >
-                <AlertCircle size={16} style={{ color: DESTRUCTIVE }} />
-                <p className="text-sm" style={{ color: DESTRUCTIVE }}>{gpsError}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 8, backgroundColor: "rgba(176,58,46,0.07)", border: "1px solid rgba(176,58,46,0.2)" }}>
+                <AlertCircle size={16} color={DESTRUCTIVE} />
+                <p style={{ fontSize: 13, color: DESTRUCTIVE }}>{gpsError}</p>
               </div>
             )}
 
             {/* Map */}
-            {(recording || recordedPath.length > 0) && (
-              <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #dddbd4", height: 400 }}>
+            <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #dddbd4" }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid #dddbd4", backgroundColor: "#fff" }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "#1a2a1e" }}>Live GPS Map</p>
+                <p style={{ fontSize: 11, color: "#6b7c6e", marginTop: 2 }}>
+                  {recording ? "Map is following your position as you drive" : "Start recording to see your position on the map"}
+                </p>
+              </div>
+              <div style={{ height: 400 }}>
                 <AdminMap
                   mode="record"
                   receptionPoint={config.receptionPoint}
+                  isRecording={recording}
                   recordedPath={recordedPath}
                   currentPosition={currentPosition}
-                  isRecording={recording}
                 />
               </div>
-            )}
+            </div>
+
+            {/* Instructions */}
+            <div style={{ borderRadius: 10, padding: 20, backgroundColor: "#fff", border: "1px solid #dddbd4" }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.1em", marginBottom: 14 }}>HOW TO RECORD A PATH</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  "Enter the house name in the field above.",
+                  "Drive to or stand at the Reception / gate point.",
+                  "Tap Start Recording, then drive slowly to the house.",
+                  "Tap Stop Recording when you arrive at the destination.",
+                  "Tap Save House Path to store the route for guests.",
+                ].map((step, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "rgba(30,74,40,0.09)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: PRIMARY }}>{i + 1}</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: "#6b7c6e", lineHeight: 1.6 }}>{step}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </main>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
     </div>
   )
 }

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { login, isAuthenticated } from "@/lib/storage"
 import { Eye, EyeOff, MapPin, ArrowRight, Check } from "lucide-react"
 
-const SERIF = "var(--font-playfair, 'Playfair Display', Georgia, serif)"
+const SERIF = "'Playfair Display', Georgia, serif"
+const SANS = "'Inter', system-ui, sans-serif"
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState("")
@@ -32,97 +33,74 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: "#f7f5f0" }}>
+    <div style={{ minHeight: "100vh", display: "flex", backgroundColor: "#f7f5f0", fontFamily: SANS }}>
 
-      {/* ── LEFT BRAND PANEL (desktop only) ── */}
-      <aside
-        className="hidden lg:flex w-[400px] flex-shrink-0 flex-col justify-between px-12 py-14"
-        style={{ backgroundColor: "#122918" }}
+      {/* LEFT BRAND PANEL */}
+      <aside style={{
+        width: 420, flexShrink: 0, backgroundColor: "#122918",
+        display: "flex", flexDirection: "column", justifyContent: "space-between",
+        padding: "48px 44px",
+      }}
+        className="hidden lg:flex"
       >
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: "#c47c2a" }}
-          >
-            <MapPin size={18} color="#fff" />
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: "#c47c2a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <MapPin size={17} color="#fff" />
           </div>
-          <span className="text-base font-semibold" style={{ color: "#f0ede6", fontFamily: SERIF }}>
-            Property Navigator
-          </span>
+          <span style={{ fontFamily: SERIF, fontSize: 15, fontWeight: 700, color: "#f0ede6" }}>Property Navigator</span>
         </div>
 
-        {/* Headline */}
         <div>
-          <p className="text-xs font-medium mb-4" style={{ color: "rgba(240,237,230,0.4)", letterSpacing: "0.14em" }}>
-            ADMIN PORTAL
-          </p>
-          <h2
-            className="text-4xl font-bold leading-snug mb-5"
-            style={{ color: "#f0ede6", fontFamily: SERIF }}
-          >
+          <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(240,237,230,0.4)", letterSpacing: "0.14em", marginBottom: 16 }}>ADMIN PORTAL</p>
+          <h2 style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 800, color: "#f0ede6", lineHeight: 1.2, marginBottom: 18 }}>
             Manage your<br />estate routes
           </h2>
-          <p className="text-sm leading-relaxed" style={{ color: "rgba(240,237,230,0.5)", maxWidth: 280 }}>
-            Set reception points, drive &amp; record paths to every home, and let your guests navigate with confidence.
+          <p style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(240,237,230,0.5)", maxWidth: 280 }}>
+            Set reception points, drive &amp; record paths to every home, then let guests navigate with confidence.
           </p>
         </div>
 
-        {/* Feature list */}
-        <div className="space-y-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {[
-            "Pin your reception / gate on the map",
+            "Pin your reception or gate on the map",
             "Record paths by driving them in real time",
             "Guests are guided turn by turn via GPS",
           ].map((f) => (
-            <div key={f} className="flex items-center gap-3">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: "rgba(196,124,42,0.25)", border: "1px solid rgba(196,124,42,0.5)" }}
-              >
+            <div key={f} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+                backgroundColor: "rgba(196,124,42,0.2)", border: "1px solid rgba(196,124,42,0.45)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
                 <Check size={11} color="#c47c2a" />
               </div>
-              <span className="text-sm" style={{ color: "rgba(240,237,230,0.6)" }}>{f}</span>
+              <span style={{ fontSize: 13, color: "rgba(240,237,230,0.6)" }}>{f}</span>
             </div>
           ))}
         </div>
       </aside>
 
-      {/* ── RIGHT FORM PANEL ── */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-14">
+      {/* RIGHT FORM */}
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 24px" }}>
 
         {/* Mobile logo */}
-        <div className="lg:hidden flex items-center gap-3 mb-12">
-          <div
-            className="w-9 h-9 rounded-md flex items-center justify-center"
-            style={{ backgroundColor: "#122918" }}
-          >
-            <MapPin size={18} color="#fff" />
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 48 }} className="lg:hidden">
+          <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: "#122918", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <MapPin size={17} color="#fff" />
           </div>
-          <span className="text-lg font-semibold" style={{ color: "#1a2a1e", fontFamily: SERIF }}>
-            Property Navigator
-          </span>
+          <span style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 700, color: "#1a2a1e" }}>Property Navigator</span>
         </div>
 
-        <div className="w-full max-w-sm">
-          <p className="text-xs font-semibold mb-1.5" style={{ color: "#6b7c6e", letterSpacing: "0.12em" }}>
-            ADMIN ACCESS
-          </p>
-          <h1 className="text-3xl font-bold mb-8" style={{ color: "#1a2a1e", fontFamily: SERIF }}>
-            Sign in
-          </h1>
+        <div style={{ width: "100%", maxWidth: 360 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7c6e", letterSpacing: "0.12em", marginBottom: 6 }}>ADMIN ACCESS</p>
+          <h1 style={{ fontFamily: SERIF, fontSize: 36, fontWeight: 800, color: "#1a2a1e", marginBottom: 36, lineHeight: 1.1 }}>Sign in</h1>
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            {/* Password field */}
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div>
-              <label
-                htmlFor="pw"
-                className="block text-xs font-semibold mb-2"
-                style={{ color: "#1a2a1e", letterSpacing: "0.08em" }}
-              >
+              <label htmlFor="pw" style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#1a2a1e", letterSpacing: "0.1em", marginBottom: 8 }}>
                 PASSWORD
               </label>
-              <div className="relative">
+              <div style={{ position: "relative" }}>
                 <input
                   id="pw"
                   type={showPw ? "text" : "password"}
@@ -130,91 +108,88 @@ export default function AdminLoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter admin password"
                   autoFocus
-                  className="w-full rounded-md px-4 py-3 pr-11 text-sm transition-shadow"
                   style={{
-                    border: "1px solid #dddbd4",
-                    backgroundColor: "#fff",
-                    color: "#1a2a1e",
-                    outline: "none",
-                    boxShadow: "none",
+                    width: "100%", padding: "12px 44px 12px 14px", borderRadius: 8,
+                    border: "1.5px solid #dddbd4", backgroundColor: "#fff",
+                    fontSize: 14, color: "#1a2a1e", fontFamily: SANS,
+                    outline: "none", boxSizing: "border-box",
+                    transition: "border-color 0.15s",
                   }}
-                  onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #1e4a28")}
-                  onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "#1e4a28")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "#dddbd4")}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
                   aria-label={showPw ? "Hide password" : "Show password"}
-                  style={{ color: "#6b7c6e", background: "none", border: "none", cursor: "pointer" }}
+                  style={{
+                    position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer", color: "#6b7c6e",
+                    display: "flex", alignItems: "center", padding: 4,
+                  }}
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            {/* Error */}
             {error && (
-              <p className="text-sm" style={{ color: "#b03a2e" }}>{error}</p>
+              <p style={{ fontSize: 13, color: "#b03a2e", lineHeight: 1.5 }}>{error}</p>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading || !password.trim()}
-              className="w-full flex items-center justify-center gap-2 rounded-md py-3 px-5 text-sm font-semibold transition-opacity"
               style={{
-                backgroundColor: loading || !password.trim() ? "#a0a8a2" : "#1e4a28",
-                color: "#f7f5f0",
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "13px 20px", borderRadius: 8, fontSize: 14, fontWeight: 700,
+                backgroundColor: loading || !password.trim() ? "#9cad9f" : "#1e4a28",
+                color: "#f7f5f0", border: "none", fontFamily: SANS,
                 cursor: loading || !password.trim() ? "not-allowed" : "pointer",
-                border: "none",
+                transition: "background-color 0.15s",
               }}
             >
               {loading ? (
                 <>
-                  <span
-                    className="w-4 h-4 rounded-full border-2 animate-spin flex-shrink-0"
-                    style={{ borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }}
-                  />
+                  <span style={{
+                    width: 16, height: 16, borderRadius: "50%", border: "2.5px solid rgba(255,255,255,0.3)",
+                    borderTopColor: "#fff", display: "inline-block",
+                    animation: "spin 0.7s linear infinite", flexShrink: 0,
+                  }} />
                   Signing in…
                 </>
               ) : (
-                <>
-                  Sign in
-                  <ArrowRight size={15} />
-                </>
+                <>Sign in <ArrowRight size={15} /></>
               )}
             </button>
           </form>
 
-          {/* Hint */}
-          <div className="mt-8 pt-6" style={{ borderTop: "1px solid #dddbd4" }}>
-            <p className="text-xs" style={{ color: "#6b7c6e" }}>
+          <div style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid #dddbd4" }}>
+            <p style={{ fontSize: 12, color: "#6b7c6e" }}>
               Default password:{" "}
-              <code
-                className="px-1.5 py-0.5 rounded text-xs"
-                style={{ backgroundColor: "#eceae4", color: "#1a2a1e", fontFamily: "monospace" }}
-              >
+              <code style={{ padding: "2px 6px", borderRadius: 4, backgroundColor: "#eceae4", color: "#1a2a1e", fontFamily: "monospace", fontSize: 12 }}>
                 admin1234
               </code>
             </p>
-            <p className="text-xs mt-1.5" style={{ color: "#6b7c6e" }}>
+            <p style={{ fontSize: 12, color: "#6b7c6e", marginTop: 6 }}>
               Change it in{" "}
-              <code style={{ fontFamily: "monospace", color: "#1a2a1e" }}>/lib/storage.ts</code>
+              <code style={{ fontFamily: "monospace", color: "#1a2a1e", fontSize: 12 }}>/lib/storage.ts</code>
             </p>
           </div>
         </div>
 
-        <div className="mt-10">
-          <a
-            href="/"
-            className="text-xs font-medium transition-colors"
-            style={{ color: "#6b7c6e", letterSpacing: "0.1em" }}
-          >
+        <div style={{ marginTop: 40 }}>
+          <a href="/" style={{ fontSize: 12, fontWeight: 500, color: "#6b7c6e", letterSpacing: "0.08em", textDecoration: "none" }}>
             &larr; Back to guest view
           </a>
         </div>
       </main>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display: none; }
+        @media (min-width: 1024px) { .lg\\:flex { display: flex !important; } .lg\\:hidden { display: none !important; } }
+      `}</style>
     </div>
   )
 }
