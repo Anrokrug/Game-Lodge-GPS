@@ -8,24 +8,29 @@ function getSQL() {
 
 async function ensureReady() {
   const sql = getSQL()
-  // Create table with lat/lng columns — plain numbers, no JSONB
+  // Drop and recreate — safest way to fix any schema mismatch
+  // Uses a version table to only do this once
   await sql`
-    CREATE TABLE IF NOT EXISTS property_config (
-      id INTEGER PRIMARY KEY,
-      lat DOUBLE PRECISION,
-      lng DOUBLE PRECISION,
-      default_zoom INTEGER DEFAULT 16,
-      property_name TEXT DEFAULT 'Zebula Golf Estate & Spa'
+    CREATE TABLE IF NOT EXISTS schema_version (
+      key TEXT PRIMARY KEY,
+      val INTEGER DEFAULT 0
     )
   `
-  await sql`
-    INSERT INTO property_config (id, default_zoom, property_name)
-    VALUES (1, 16, 'Zebula Golf Estate & Spa')
-    ON CONFLICT (id) DO NOTHING
-  `
-  // Add lat/lng columns if old table existed without them
-  await sql`ALTER TABLE property_config ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION`
-  await sql`ALTER TABLE property_config ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`
+  const ver = await sql`SELECT val FROM schema_version WHERE key = 'config_v3'`
+  if (ver.length === 0) {
+    await sql`DROP TABLE IF EXISTS property_config`
+    await sql`
+      CREATE TABLE property_config (
+        id INTEGER PRIMARY KEY,
+        lat DOUBLE PRECISION,
+        lng DOUBLE PRECISION,
+        default_zoom INTEGER DEFAULT 16,
+        property_name TEXT DEFAULT 'Zebula Golf Estate & Spa'
+      )
+    `
+    await sql`INSERT INTO property_config (id, default_zoom, property_name) VALUES (1, 16, 'Zebula Golf Estate & Spa')`
+    await sql`INSERT INTO schema_version (key, val) VALUES ('config_v3', 1)`
+  }
 }
 
 export async function GET() {
@@ -56,7 +61,7 @@ export async function POST(req: Request) {
     const sql = getSQL()
     const body = await req.json()
 
-    if (body.receptionPoint !== undefined && body.receptionPoint !== null) {
+    if (body.receptionPoint != null) {
       const lat = Number(body.receptionPoint.lat)
       const lng = Number(body.receptionPoint.lng)
       await sql`UPDATE property_config SET lat = ${lat}, lng = ${lng} WHERE id = 1`
