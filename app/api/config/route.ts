@@ -8,29 +8,44 @@ function getSQL() {
 
 async function ensureReady() {
   const sql = getSQL()
-  // Drop and recreate — safest way to fix any schema mismatch
-  // Uses a version table to only do this once
+
+  // Step 1 — create version table
   await sql`
     CREATE TABLE IF NOT EXISTS schema_version (
       key TEXT PRIMARY KEY,
       val INTEGER DEFAULT 0
     )
   `
-  const ver = await sql`SELECT val FROM schema_version WHERE key = 'config_v3'`
-  if (ver.length === 0) {
-    await sql`DROP TABLE IF EXISTS property_config`
-    await sql`
-      CREATE TABLE property_config (
-        id INTEGER PRIMARY KEY,
-        lat DOUBLE PRECISION,
-        lng DOUBLE PRECISION,
-        default_zoom INTEGER DEFAULT 16,
-        property_name TEXT DEFAULT 'Zebula Golf Estate & Spa'
-      )
-    `
-    await sql`INSERT INTO property_config (id, default_zoom, property_name) VALUES (1, 16, 'Zebula Golf Estate & Spa')`
-    await sql`INSERT INTO schema_version (key, val) VALUES ('config_v3', 1)`
-  }
+
+  // Step 2 — check if migration already done
+  const ver = await sql`SELECT val FROM schema_version WHERE key = 'config_v4'`
+  if (ver.length > 0) return  // already migrated, skip everything
+
+  // Step 3 — drop old table no matter what it looks like
+  await sql`DROP TABLE IF EXISTS property_config CASCADE`
+
+  // Step 4 — create fresh table with simple numeric columns
+  await sql`
+    CREATE TABLE property_config (
+      id INTEGER PRIMARY KEY,
+      lat DOUBLE PRECISION,
+      lng DOUBLE PRECISION,
+      default_zoom INTEGER DEFAULT 16,
+      property_name TEXT DEFAULT 'Zebula Golf Estate & Spa'
+    )
+  `
+
+  // Step 5 — insert default row
+  await sql`
+    INSERT INTO property_config (id, lat, lng, default_zoom, property_name)
+    VALUES (1, NULL, NULL, 16, 'Zebula Golf Estate & Spa')
+  `
+
+  // Step 6 — mark migration done
+  await sql`
+    INSERT INTO schema_version (key, val) VALUES ('config_v4', 1)
+    ON CONFLICT (key) DO UPDATE SET val = 1
+  `
 }
 
 export async function GET() {
@@ -51,7 +66,10 @@ export async function GET() {
     })
   } catch (e: any) {
     console.error("GET /api/config:", e?.message)
-    return NextResponse.json({ config: { receptionPoint: null, defaultZoom: 16, propertyName: "Zebula Golf Estate & Spa" } })
+    // Always return a usable fallback — never 500 on GET
+    return NextResponse.json({
+      config: { receptionPoint: null, defaultZoom: 16, propertyName: "Zebula Golf Estate & Spa" }
+    })
   }
 }
 
@@ -64,7 +82,9 @@ export async function POST(req: Request) {
     if (body.receptionPoint != null) {
       const lat = Number(body.receptionPoint.lat)
       const lng = Number(body.receptionPoint.lng)
-      await sql`UPDATE property_config SET lat = ${lat}, lng = ${lng} WHERE id = 1`
+      if (!isNaN(lat) && !isNaN(lng)) {
+        await sql`UPDATE property_config SET lat = ${lat}, lng = ${lng} WHERE id = 1`
+      }
     }
     if (body.defaultZoom !== undefined) {
       await sql`UPDATE property_config SET default_zoom = ${Number(body.defaultZoom)} WHERE id = 1`
